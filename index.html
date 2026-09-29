@@ -91,6 +91,12 @@
   .rb-stat { background: var(--surface); border-radius: 10px; padding: 9px 6px; text-align: center; }
   .rb-stat-num { font-size: 15px; font-weight: 600; color: var(--paprika); }
   .rb-stat-label { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .rb-stat-weight .rb-stat-num { color: #8fb3c9; }
+  .rb-stat-kcal .rb-stat-num { color: var(--mustard); }
+  .rb-stat-protein .rb-stat-num { color: #7fae62; }
+  .rb-stat-carbs .rb-stat-num { color: var(--paprika); }
+  .rb-stat-fat .rb-stat-num { color: #c9707a; }
+  .rb-stat-cost .rb-stat-num { color: #6fa3a0; }
   .rb-per100 { font-size: 12px; color: var(--muted); text-align: center; margin: 8px 0 4px; }
   .rb-side-line { font-size: 12px; color: var(--muted); text-align: center; margin: 0 0 4px; line-height: 1.5; }
   .rb-combined-line { font-size: 12.5px; color: var(--mustard); text-align: center; margin: 4px 0 18px; line-height: 1.5; font-weight: 500; }
@@ -165,14 +171,16 @@
   }
   .rb-step-text { font-size: 14.5px; line-height: 1.55; }
 
-  .rb-reset { background: none; border: none; color: var(--muted); font-size: 12.5px; text-decoration: underline; padding: 0; margin-top: 10px; }
+  .rb-reset-row { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; }
+  .rb-reset { background: none; border: none; color: var(--muted); font-size: 12.5px; text-decoration: underline; padding: 0; }
+  .rb-reset:disabled { color: rgba(168,154,130,0.4); text-decoration: none; cursor: default; }
 </style>
 </head>
 <body>
 <div id="rb-root">
   <div class="rb-header">
     <p class="rb-title" id="rb-header-title">Blaze's Cook Book</p>
-    <p class="rb-subtitle" id="rb-header-sub">21 recipes from the batch-cooking system</p>
+    <p class="rb-subtitle" id="rb-header-sub">20 recipes from the batch-cooking system</p>
   </div>
   <div class="rb-body" id="rb-body"></div>
 </div>
@@ -328,7 +336,7 @@
   }
 
   const recipes = [
-    { id:"r1", cat:"Breakfasts", title:"Masala Egg Bhurji + Toast + Milk", price:1.00, sidesEligible:true,
+    { id:"r1", cat:"Breakfasts", title:"Masala Egg Bhurji with Milk", price:1.00, sidesEligible:true,
       ingredients:[
         {a:4,u:"",n:"eggs",type:"egg"},
         {a:0.5,u:"",n:"onion, diced",type:"onion",note:"diced"},
@@ -386,7 +394,7 @@
         "Serve with rice or another side below."
       ] },
 
-    { id:"r4", cat:"Protein Mains", title:"Seared Chicken with Rice + Broccoli", price:0.20, tracked:true, sidesEligible:true, cycleOrder:7, cycleDays:"~3–4 days",
+    { id:"r4", cat:"Protein Mains", title:"Seared Chicken with Broccoli", price:0.20, tracked:true, sidesEligible:true,
       ingredients:[
         {a:150,u:"g",n:"chicken breast"},{a:200,u:"g",n:"broccoli or cauliflower"},
         {a:3,u:"",n:"garlic cloves",type:"garlic"},
@@ -401,7 +409,7 @@
         "Slice the rested chicken and plate with the vegetables. Add rice or another side below if you want one."
       ] },
 
-    { id:"r5", cat:"Protein Mains", title:"Masala Chicken with Cauliflower + Bread", price:0.25, tracked:true, sidesEligible:true, cycleOrder:3, cycleDays:"~3–4 days",
+    { id:"r5", cat:"Protein Mains", title:"Masala Chicken with Cauliflower", price:0.25, tracked:true, sidesEligible:true,
       ingredients:[
         {a:150,u:"g",n:"chicken, diced"},{a:200,u:"g",n:"cauliflower (or 250g cabbage)"},
         {a:1,u:"",n:"onion",type:"onion"},
@@ -421,7 +429,7 @@
         "Serve with bread or another side below."
       ] },
 
-    { id:"r6", cat:"Protein Mains", title:"Spiced Chicken with Spinach + Bread", price:0.25, tracked:true, sidesEligible:true, cycleOrder:5, cycleDays:"~3–4 days",
+    { id:"r6", cat:"Protein Mains", title:"Spiced Chicken with Spinach", price:0.25, tracked:true, sidesEligible:true,
       ingredients:[
         {a:150,u:"g",n:"chicken, strips"},{a:200,u:"g",n:"spinach"},
         {a:1,u:"",n:"onion",type:"onion"},
@@ -439,7 +447,7 @@
         "Serve with bread or another side below."
       ] },
 
-    { id:"r7", cat:"Protein Mains", title:"Chicken + Cabbage Stir Fry + Bread", price:0.30, tracked:true, sidesEligible:true, cycleOrder:6, cycleDays:"~3–4 days",
+    { id:"r7", cat:"Protein Mains", title:"Chicken & Cabbage Stir Fry", price:0.30, tracked:true, sidesEligible:true,
       ingredients:[
         {a:100,u:"g",n:"chicken, strips"},{a:250,u:"g",n:"cabbage"},{a:100,u:"g",n:"carrot"},
         {a:1,u:"",n:"onion",type:"onion"},
@@ -456,7 +464,7 @@
         "Serve with bread or another side below."
       ] },
 
-    { id:"r9", cat:"Protein Mains", title:"Canned Mackerel Masala with Potato", price:0.95, sidesEligible:true, cycleOrder:2, cycleDays:"~3–4 days",
+    { id:"r9", cat:"Protein Mains", title:"Canned Mackerel Masala with Potato", price:0.95, sidesEligible:true,
       ingredients:[
         {a:1,u:"can",n:"mackerel, drained",type:"can"},{a:250,u:"g",n:"potato, boiled and chunked"},
         {a:0.5,u:"",n:"onion",type:"onion"},
@@ -475,26 +483,7 @@
         "Season with salt. This one's already got potato in it, but add rice or bread below if you want more carbs with it."
       ] },
 
-    { id:"r10", cat:"Protein Mains", title:"High-Protein Chicken Skillet", price:null, sidesEligible:true, cycleOrder:8, cycleDays:"~3–4 days",
-      ingredients:[
-        {a:280,u:"g",n:"chicken, diced"},
-        {a:1,u:"",n:"onion",type:"onion"},
-        {a:1,u:"",n:"tomato",type:"tomato"},
-        {a:3,u:"",n:"garlic cloves",type:"garlic"},
-        {a:100,u:"g",n:"spinach"},{a:0.5,u:"tsp",n:"cumin seeds"},
-        {a:0.25,u:"tsp",n:"turmeric"},{a:0.5,u:"tsp",n:"chili powder"},{a:0.25,u:"tsp",n:"garam masala"},
-        {a:1.5,u:"tbsp",n:"oil"},{a:null,u:"",n:"salt"}
-      ],
-      steps:[
-        "Dice the chicken, onion, and tomato; mince the garlic.",
-        "Heat the oil in a skillet. Sear the chicken until cooked through and lightly browned. Set aside.",
-        "In the same skillet, cook the onion and garlic until soft.",
-        "Add the tomato, cumin, turmeric, chili, and garam masala. Cook until the tomato softens.",
-        "Add the spinach and let it wilt down.",
-        "Fold the chicken back in and mix everything together. Season with salt and serve immediately."
-      ] },
-
-    { id:"r11", cat:"Protein Mains", title:"Chicken & Potato Masala", price:0.35, tracked:true, sidesEligible:true, cycleOrder:1, cycleDays:"~3–4 days",
+    { id:"r11", cat:"Protein Mains", title:"Chicken & Potato Masala", price:0.35, tracked:true, sidesEligible:true,
       ingredients:[
         {a:150,u:"g",n:"chicken, diced"},{a:200,u:"g",n:"potato, cubed"},
         {a:1,u:"",n:"onion",type:"onion"},
@@ -512,7 +501,7 @@
         "Stir in the garam masala and salt to finish."
       ] },
 
-    { id:"r18", cat:"Protein Mains", title:"Chicken & Pinto Bean Masala", price:0.55, sidesEligible:true, cycleOrder:4, cycleDays:"~3–4 days",
+    { id:"r18", cat:"Protein Mains", title:"Chicken & Pinto Bean Masala", price:0.55, sidesEligible:true,
       ingredients:[
         {a:150,u:"g",n:"chicken, diced"},
         {a:40,u:"g",n:"dry pinto beans (Wachtelbohnen), soaked overnight"},
@@ -939,16 +928,13 @@
 
   function renderHome() {
     headerTitle.textContent = "Blaze's Cook Book";
-    headerSub.textContent = "21 recipes from the batch-cooking system — tap one to cook.";
+    headerSub.textContent = recipes.length + " recipes from the batch-cooking system — tap one to cook.";
     const prefs = getPrefs();
     let html = togglePanelHtml(false);
     CATS.forEach(cat => {
       let items = recipes.filter(r => r.cat === cat);
       if (!items.length) return;
-      const hasCycle = items.some(r => r.cycleOrder);
-      if (hasCycle) items = items.slice().sort((a, b) => (a.cycleOrder || 99) - (b.cycleOrder || 99));
       html += `<h2 class="rb-cat-heading">${cat}</h2>`;
-      if (hasCycle) html += `<p class="rb-side-picker-label" style="margin:-2px 0 8px;">Cook one after another, ~3–4 days each, then repeat the cycle</p>`;
       items.forEach(r => {
         const st = getRecipeState(r.id);
         const nut = computeNutrition(r, 1, st.overrides);
@@ -956,14 +942,13 @@
         const doneCount = Object.values(st.checked).filter(Boolean).length;
         const checkNote = doneCount > 0
           ? `<span class="rb-row-check">${doneCount}/${total} \u2713</span>` : "";
-        const cycleTag = r.cycleDays ? `<span class="rb-row-check" style="color:var(--muted);">${r.cycleDays}</span>` : "";
         html += `
           <button class="rb-row" data-open="${r.id}">
             <span class="rb-row-main">
               <span class="rb-row-title">${r.title}</span>
               <span class="rb-row-meta">${Math.round(nut.kcal)} kcal &nbsp;\u00B7&nbsp; ${Math.round(nut.p)}g protein &nbsp;\u00B7&nbsp; ${Math.round(nut.totalG)}g</span>
             </span>
-            ${checkNote}${cycleTag}
+            ${checkNote}
             <span class="rb-chevron">\u203A</span>
           </button>`;
       });
@@ -972,7 +957,8 @@
   }
 
   function statBox(num, label) {
-    return `<div class="rb-stat"><div class="rb-stat-num">${num}</div><div class="rb-stat-label">${label}</div></div>`;
+    const cls = "rb-stat-" + label.replace(/[^a-z]/gi, "").toLowerCase();
+    return `<div class="rb-stat ${cls}"><div class="rb-stat-num">${num}</div><div class="rb-stat-label">${label}</div></div>`;
   }
 
   function renderSideSection(r, st) {
@@ -1024,7 +1010,7 @@
     const scale = st.servings;
 
     headerTitle.textContent = r.title;
-    headerSub.textContent = r.cat + (r.cycleDays ? " — #" + r.cycleOrder + " of 8 in rotation, cook " + r.cycleDays : "");
+    headerSub.textContent = r.cat;
 
     const main = computeNutrition(r, scale, st.overrides);
     const sideNut = computeSideNut(st.side);
@@ -1102,6 +1088,7 @@
 
     const total = totalRowCount(r, prefs, st);
     const doneCount = Object.values(st.checked).filter(Boolean).length;
+    const hasEdits = Object.keys(st.overrides).length > 0 || st.custom.length > 0;
 
     const stepsHtml = `<ol class="rb-steps">${r.steps.map((s, i) => `
         <li class="rb-step"><span class="rb-step-num">${i + 1}</span><span class="rb-step-text">${s}</span></li>`).join("")}</ol>`;
@@ -1147,7 +1134,10 @@
         <input type="text" class="rb-add-input" placeholder="Add an ingredient…">
         <button class="rb-add-btn" data-add-ing="1" type="button">Add</button>
       </div>
-      ${doneCount > 0 ? `<button class="rb-reset" data-reset="1">Uncheck all</button>` : ""}
+      <div class="rb-reset-row">
+        <button class="rb-reset" data-reset="1" ${doneCount === 0 ? "disabled" : ""}>Uncheck all</button>
+        <button class="rb-reset" data-reset-ingredients="1" ${hasEdits ? "" : "disabled"}>Reset ingredients to default</button>
+      </div>
 
       ${renderSideSection(r, st)}
 
@@ -1160,6 +1150,26 @@
     if (currentId) renderRecipe(currentId);
     else renderHome();
   }
+
+  // In-app navigation history, so the phone's back button/gesture steps back
+  // through the app (recipe -> home) instead of closing it outright.
+  function openRecipe(id) {
+    currentId = id;
+    history.pushState({ rb: "recipe", id }, "", "#" + id);
+    render();
+    body.scrollTo(0, 0);
+  }
+  function goHome(fromPop) {
+    currentId = null;
+    if (!fromPop) history.pushState({ rb: "home" }, "", location.pathname + location.search);
+    render();
+    body.scrollTo(0, 0);
+  }
+  window.addEventListener("popstate", (e) => {
+    const st = e.state;
+    if (st && st.rb === "recipe" && byId[st.id]) { currentId = st.id; render(); }
+    else { currentId = null; render(); }
+  });
 
   function tryAddIngredient() {
     if (!currentId) return;
@@ -1185,10 +1195,10 @@
 
   root.addEventListener("click", (e) => {
     const openBtn = e.target.closest("[data-open]");
-    if (openBtn) { currentId = openBtn.getAttribute("data-open"); render(); return; }
+    if (openBtn) { openRecipe(openBtn.getAttribute("data-open")); return; }
 
     const backBtn = e.target.closest("[data-back]");
-    if (backBtn) { currentId = null; render(); return; }
+    if (backBtn) { history.back(); return; }
 
     const incBtn = e.target.closest("[data-inc]");
     if (incBtn && currentId) {
@@ -1203,9 +1213,19 @@
       saveState(); render(); return;
     }
     const resetBtn = e.target.closest("[data-reset]");
-    if (resetBtn && currentId) {
+    if (resetBtn && !resetBtn.disabled && currentId) {
       const st = getRecipeState(currentId);
       st.checked = {};
+      saveState(); render(); return;
+    }
+    const resetIngBtn = e.target.closest("[data-reset-ingredients]");
+    if (resetIngBtn && !resetIngBtn.disabled && currentId) {
+      const st = getRecipeState(currentId);
+      st.overrides = {};
+      st.custom.forEach(c => delete st.checked["custom_" + c.id]);
+      st.custom = [];
+      st.customSeq = 0;
+      delete editingIng[currentId];
       saveState(); render(); return;
     }
     const addBtn = e.target.closest("[data-add-ing]");
@@ -1322,7 +1342,17 @@
     }
   });
 
-  loadState().then(render);
+  loadState().then(() => {
+    const hashId = location.hash ? location.hash.slice(1) : "";
+    if (hashId && byId[hashId]) {
+      currentId = hashId;
+      history.replaceState({ rb: "home" }, "", location.pathname + location.search);
+      history.pushState({ rb: "recipe", id: hashId }, "", "#" + hashId);
+    } else {
+      history.replaceState({ rb: "home" }, "", location.pathname + location.search);
+    }
+    render();
+  });
 })();
 </script>
 <script>

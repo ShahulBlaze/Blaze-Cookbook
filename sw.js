@@ -1,4 +1,4 @@
-const CACHE_NAME = "blaze-cookbook-v1";
+const CACHE_NAME = "blaze-cookbook-v2";
 const ASSETS = [
   "./",
   "./index.html",
