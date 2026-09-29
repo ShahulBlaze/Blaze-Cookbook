@@ -2,7 +2,7 @@
 
 An installable PWA (Progressive Web App) version of Blaze's batch-cooking recipe & nutrition tracker.
 
-Live at: https://shahulblaze.github.io/blaze-cookbook/
+Live at: https://shahulblaze.github.io/Blaze-Cookbook/
 
 ## Install on Android
 1. Open the link above in Chrome.
