@@ -1,0 +1,1336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Blaze's Cook Book</title>
+<meta name="description" content="Blaze's batch-cooking recipe book with live nutrition tracking.">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#211c14">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cook Book">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    background: #211c14;
+    min-height: 100vh;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap');
+
+  #rb-root {
+    --bg: #211c14;
+    --surface: #2a2319;
+    --surface-2: #332b1e;
+    --line: rgba(241,233,216,0.14);
+    --text: #f1e9d8;
+    --muted: #a89a82;
+    --mustard: #e3a008;
+    --paprika: #d1531c;
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    border-radius: 14px;
+    overflow: hidden;
+    max-width: 460px;
+    margin: 0 auto;
+    min-height: 480px;
+  }
+  #rb-root * { box-sizing: border-box; }
+  #rb-root button { font-family: inherit; cursor: pointer; }
+
+  .rb-header { padding: 22px 20px 16px; border-bottom: 1px solid var(--line); }
+  .rb-title { font-family: 'Fraunces', serif; font-weight: 600; font-size: 26px; letter-spacing: -0.01em; margin: 0; }
+  .rb-subtitle { color: var(--muted); font-size: 13.5px; margin: 4px 0 0; }
+
+  .rb-body { padding: 4px 20px 24px; }
+
+  .rb-toggle-panel {
+    background: var(--surface); border-radius: 12px; padding: 12px 14px;
+    margin: 16px 0 6px; display: flex; flex-direction: column; gap: 12px;
+  }
+  .rb-toggle-panel.rb-toggle-panel-inline { margin: 6px 0 18px; }
+  .rb-toggle-heading { font-size: 11.5px; color: var(--muted); margin: 0 0 -2px; }
+  .rb-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .rb-toggle-label { font-size: 13.5px; line-height: 1.3; }
+  .rb-toggle-sub { display: block; font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+  .rb-switch-wrap { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+  .rb-switch-input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .rb-switch { position: absolute; inset: 0; border-radius: 12px; background: var(--line); pointer-events: none; transition: background .15s; }
+  .rb-switch::after {
+    content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px;
+    border-radius: 50%; background: var(--text); transition: transform .15s;
+  }
+  .rb-switch-input:checked + .rb-switch { background: var(--mustard); }
+  .rb-switch-input:checked + .rb-switch::after { transform: translateX(18px); background: var(--bg); }
+
+  .rb-cat-heading { font-family: 'Fraunces', serif; font-weight: 500; font-size: 16px; color: var(--mustard); margin: 22px 0 6px; }
+
+  .rb-row {
+    width: 100%; background: none; border: none; border-bottom: 1px solid var(--line);
+    padding: 13px 2px; display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; text-align: left; color: inherit;
+  }
+  .rb-row-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .rb-row-title { font-size: 15px; font-weight: 500; line-height: 1.3; }
+  .rb-row-meta { font-size: 12.5px; color: var(--muted); }
+  .rb-chevron { color: var(--muted); font-size: 18px; flex-shrink: 0; }
+  .rb-row-check { font-size: 11px; color: var(--mustard); white-space: nowrap; }
+
+  .rb-back { background: none; border: none; color: var(--muted); font-size: 14px; padding: 4px 0 2px; display: flex; align-items: center; gap: 4px; }
+  .rb-back:active { color: var(--text); }
+
+  .rb-recipe-title { font-family: 'Fraunces', serif; font-weight: 600; font-size: 22px; line-height: 1.25; margin: 10px 0 14px; }
+
+  .rb-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .rb-stat { background: var(--surface); border-radius: 10px; padding: 9px 6px; text-align: center; }
+  .rb-stat-num { font-size: 15px; font-weight: 600; color: var(--paprika); }
+  .rb-stat-label { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .rb-per100 { font-size: 12px; color: var(--muted); text-align: center; margin: 8px 0 4px; }
+  .rb-side-line { font-size: 12px; color: var(--muted); text-align: center; margin: 0 0 4px; line-height: 1.5; }
+  .rb-combined-line { font-size: 12.5px; color: var(--mustard); text-align: center; margin: 4px 0 18px; line-height: 1.5; font-weight: 500; }
+
+  .rb-servings-row { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border-radius: 12px; padding: 10px 14px; margin-bottom: 18px; }
+  .rb-servings-label { font-size: 14px; font-weight: 500; }
+  .rb-stepper { display: flex; align-items: center; gap: 14px; }
+  .rb-stepper button {
+    width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--mustard);
+    background: none; color: var(--mustard); font-size: 17px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .rb-stepper button:disabled { opacity: 0.3; }
+  .rb-stepper button:active:not(:disabled) { background: var(--mustard); color: var(--bg); }
+  .rb-stepper-val { font-variant-numeric: tabular-nums; font-size: 16px; font-weight: 600; min-width: 16px; text-align: center; }
+
+  .rb-section-label { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 500; color: var(--mustard); margin: 0 0 4px; }
+  .rb-ing-progress { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+
+  .rb-ing-row { display: flex; align-items: center; gap: 11px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .rb-ing-check { position: absolute; opacity: 0; width: 20px; height: 20px; }
+  .rb-box { width: 19px; height: 19px; border: 1.5px solid var(--muted); border-radius: 5px; flex-shrink: 0; position: relative; }
+  .rb-ing-check:checked + .rb-box { background: var(--mustard); border-color: var(--mustard); }
+  .rb-ing-check:checked + .rb-box::after {
+    content: ''; position: absolute; left: 5px; top: 1px; width: 5px; height: 10px;
+    border: solid var(--bg); border-width: 0 2px 2px 0; transform: rotate(45deg);
+  }
+  .rb-ing-text { font-size: 14.5px; line-height: 1.35; flex: 1; }
+  .rb-ing-check:checked ~ .rb-ing-text { color: var(--muted); text-decoration: line-through; }
+  .rb-ing-amt { font-weight: 600; color: var(--text); }
+  .rb-ing-check:checked ~ .rb-ing-text .rb-ing-amt { color: var(--muted); }
+  .rb-custom-remove { background: none; border: none; color: var(--muted); font-size: 17px; line-height: 1; padding: 0 2px; flex-shrink: 0; }
+
+  .rb-add-row { display: flex; gap: 8px; margin-top: 12px; }
+  .rb-add-input {
+    flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+    padding: 9px 11px; color: var(--text); font-size: 14px; font-family: inherit;
+  }
+  .rb-add-input::placeholder { color: var(--muted); }
+  .rb-add-btn { background: var(--mustard); color: var(--bg); border: none; border-radius: 8px; padding: 0 16px; font-size: 14px; font-weight: 600; }
+
+  .rb-side-picker-label { font-family: 'Fraunces', serif; font-size: 13px; color: var(--muted); margin: 0 0 8px; }
+  .rb-side-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .rb-side-chip {
+    padding: 7px 14px; border-radius: 20px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--text); font-size: 13px;
+  }
+  .rb-side-input-panel {
+    background: var(--surface); border-radius: 12px; padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .rb-side-portion-btn {
+    background: var(--mustard); color: var(--bg); border: none; border-radius: 8px;
+    padding: 10px 12px; font-size: 13.5px; font-weight: 600; text-align: left;
+  }
+  .rb-side-manual-row { display: flex; gap: 8px; align-items: center; }
+  .rb-side-manual-input {
+    width: 80px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 10px; color: var(--text); font-size: 14px; font-family: inherit;
+  }
+  .rb-side-manual-row span { font-size: 13px; color: var(--muted); }
+  .rb-side-cancel { background: none; border: none; color: var(--muted); font-size: 12.5px; text-decoration: underline; padding: 0; align-self: flex-start; }
+  .rb-side-added-sub { font-size: 11.5px; color: var(--muted); margin: 4px 0 0; }
+
+  .rb-steps { list-style: none; padding: 0; margin: 0; }
+  .rb-step { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); align-items: flex-start; }
+  .rb-step:last-child { border-bottom: none; }
+  .rb-step-num {
+    width: 22px; height: 22px; border-radius: 50%; background: var(--mustard); color: var(--bg);
+    font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .rb-step-text { font-size: 14.5px; line-height: 1.55; }
+
+  .rb-reset { background: none; border: none; color: var(--muted); font-size: 12.5px; text-decoration: underline; padding: 0; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div id="rb-root">
+  <div class="rb-header">
+    <p class="rb-title" id="rb-header-title">Blaze's Cook Book</p>
+    <p class="rb-subtitle" id="rb-header-sub">21 recipes from the batch-cooking system</p>
+  </div>
+  <div class="rb-body" id="rb-body"></div>
+</div>
+<script>
+(function(){
+  const CATS = ["Breakfasts", "Protein Mains", "Protein Boosters", "Veg Mains", "Weekend Feasts"];
+
+  const GF = {
+    onion: 150, tomato: 120, garlicClove: 3, garlicPowderTsp: 3, gingerPowderTsp: 2, banana: 118,
+    egg: 50, bread: 30, brinjal: 450, can: 120, tomatoPureeTbsp: 16,
+    tspSpice: 3, tbspSpice: 9, tspOil: 4.5, tbspOil: 13.5, ml: 1
+  };
+  const TOMATO_PUREE_TBSP_PER_UNIT = 1.5; // ~1.5 tbsp concentrated puree per whole tomato it replaces
+
+  const NUT = {
+    egg:{kcal:155,p:12.6,c:1.1,f:10.6}, bread:{kcal:265,p:9,c:49,f:3.2}, milk:{kcal:61,p:3.2,c:4.8,f:3.3},
+    onion:{kcal:40,p:1.1,c:9.3,f:0.1}, tomato:{kcal:18,p:0.9,c:3.9,f:0.2}, garlic:{kcal:149,p:6.4,c:33,f:0.5},
+    tomato_puree:{kcal:82,p:4.3,c:18.9,f:0.5},
+    cumin:{kcal:375,p:17.8,c:44.2,f:22.3}, turmeric:{kcal:312,p:9.7,c:67.1,f:3.3}, chili:{kcal:282,p:13.5,c:49.7,f:14.3},
+    coriander_powder:{kcal:298,p:12.4,c:55,f:17.8}, garam_masala:{kcal:300,p:12,c:50,f:15}, salt:{kcal:0,p:0,c:0,f:0},
+    oil:{kcal:884,p:0,c:0,f:100}, chicken:{kcal:120,p:22.5,c:0,f:2.6}, rice_cooked:{kcal:130,p:2.7,c:28,f:0.3},
+    dal_cooked:{kcal:116,p:9,c:20,f:0.4}, lentils_dry:{kcal:352,p:24,c:60,f:1.1}, spinach:{kcal:23,p:2.9,c:3.6,f:0.4},
+    peas:{kcal:81,p:5.4,c:14.5,f:0.4}, broccoli:{kcal:34,p:2.8,c:6.6,f:0.4}, cauliflower:{kcal:25,p:1.9,c:5,f:0.3},
+    cabbage:{kcal:25,p:1.3,c:5.8,f:0.1}, carrot:{kcal:41,p:0.9,c:9.6,f:0.2}, potato:{kcal:77,p:2,c:17,f:0.1},
+    brinjal:{kcal:25,p:1,c:6,f:0.2}, mackerel:{kcal:205,p:19,c:0,f:13.9}, pasta_dry:{kcal:371,p:13,c:75,f:1.5},
+    beans_cooked:{kcal:143,p:9,c:26.2,f:0.65}, beans_dry:{kcal:347,p:21,c:63,f:1.2}, water:{kcal:0,p:0,c:0,f:0},
+    couscous_dry:{kcal:376,p:12.8,c:77.4,f:0.6}, semolina_dry:{kcal:360,p:12.7,c:72.8,f:1.1}, tortilla:{kcal:310,p:8,c:50,f:7},
+    potato_baked:{kcal:93,p:2.1,c:21.1,f:0.1}, beef:{kcal:250,p:26,c:0,f:15},
+    black_pepper:{kcal:251,p:10.4,c:63.9,f:3.3}, rice_dry:{kcal:350,p:7.5,c:78,f:0.5},
+    banana:{kcal:89,p:1.1,c:22.8,f:0.3}, whey:{kcal:400,p:80,c:6.7,f:5},
+    tuna_canned:{kcal:130,p:26,c:0,f:1}, cottage_cheese:{kcal:98,p:11,c:3.4,f:4.3}, grilling_cheese:{kcal:320,p:22,c:2,f:25},
+    flour:{kcal:364,p:10.3,c:76.3,f:1}
+  };
+
+
+  // side-dish options offered when a recipe has no single-pot carb of its own
+  const SIDE_TYPES = [
+    { key:"rice", label:"Rice", nut:"rice_cooked", portion:150, note:"cooked" },
+    { key:"potato", label:"Potato", nut:"potato_baked", portion:180, note:"baked, with salt" },
+    { key:"bread", label:"Bread", nut:"bread", portion:60, note:"~2 slices" },
+    { key:"pasta", label:"Pasta", nut:"pasta_dry", portion:80, note:"dry" },
+    { key:"couscous", label:"Couscous", nut:"couscous_dry", portion:80, note:"dry" },
+    { key:"semolina", label:"Semolina", nut:"semolina_dry", portion:60, note:"dry" },
+    { key:"tortilla", label:"Tortilla", nut:"tortilla", portion:50, note:"~1 piece" }
+  ];
+  const sideTypeByKey = {};
+  SIDE_TYPES.forEach(s => sideTypeByKey[s.key] = s);
+
+  function getNutKey(ing) {
+    if (ing.type === "onion") return "onion";
+    if (ing.type === "banana") return "banana";
+    if (ing.type === "tomato") return "tomato";
+    if (ing.type === "garlic") return "garlic";
+    if (ing.type === "egg") return "egg";
+    if (ing.type === "bread") return "bread";
+    if (ing.type === "brinjal") return "brinjal";
+    if (ing.type === "can") return "mackerel";
+    if (ing.type === "tuna_can") return "tuna_canned";
+    const n = ing.n.toLowerCase();
+    if (n.includes("chicken")) return "chicken";
+    if (n.includes("whey")) return "whey";
+    if (n.includes("cottage cheese") || n.includes("tvaroh")) return "cottage_cheese";
+    if (n.includes("grilling cheese") || n.includes("halloumi")) return "grilling_cheese";
+    if (n.includes("flour")) return "flour";
+    if (n.includes("beef")) return "beef";
+    if (n.includes("black pepper") || n.includes("crushed pepper")) return "black_pepper";
+    if (n.includes("cooked dal")) return "dal_cooked";
+    if (n.includes("dry red lentils")) return "lentils_dry";
+    if (n.includes("wachtelbohnen") || n.includes("pinto bean")) return (n.includes("dry") || n.includes("dried")) ? "beans_dry" : "beans_cooked";
+    if (n.includes("cooked rice")) return "rice_cooked";
+    if (n.includes("rice")) return "rice_dry";
+    if (n.includes("broccoli")) return "broccoli";
+    if (n.includes("cauliflower")) return "cauliflower";
+    if (n.includes("cabbage")) return "cabbage";
+    if (n.includes("spinach")) return "spinach";
+    if (n.includes("peas")) return "peas";
+    if (n.includes("carrot")) return "carrot";
+    if (n.includes("potato")) return "potato";
+    if (n.includes("pasta")) return "pasta_dry";
+    if (n.includes("milk")) return "milk";
+    if (n.includes("cumin")) return "cumin";
+    if (n.includes("turmeric")) return "turmeric";
+    if (n.includes("chili")) return "chili";
+    if (n.includes("coriander")) return "coriander_powder";
+    if (n.includes("garam masala")) return "garam_masala";
+    if (n.includes("oil")) return "oil";
+    if (n.includes("water")) return "water";
+    if (n.includes("salt")) return "salt";
+    return null;
+  }
+
+  function isOil(ing) { return /\boil\b/i.test(ing.n); }
+
+  function trueGrams(ing, amount) {
+    if (ing.type === "onion") return amount * GF.onion;
+    if (ing.type === "banana") return amount * GF.banana;
+    if (ing.type === "tomato") return amount * GF.tomato;
+    if (ing.type === "garlic") return amount * GF.garlicClove;
+    if (ing.type === "egg") return amount * GF.egg;
+    if (ing.type === "bread") return amount * GF.bread;
+    if (ing.type === "brinjal") return amount * GF.brinjal;
+    if (ing.type === "can") return amount * GF.can;
+    if (ing.type === "tuna_can") return amount * GF.can;
+    if (ing.u === "g") return amount;
+    if (ing.u === "ml") return amount * GF.ml;
+    if (ing.u === "tsp") return amount * (isOil(ing) ? GF.tspOil : GF.tspSpice);
+    if (ing.u === "tbsp") return amount * (isOil(ing) ? GF.tbspOil : GF.tbspSpice);
+    return 0;
+  }
+
+  function emptyNut() { return { totalG: 0, kcal: 0, p: 0, c: 0, f: 0 }; }
+  function addToNut(acc, ing, amt) {
+    const g = trueGrams(ing, amt);
+    acc.totalG += g;
+    const key = getNutKey(ing);
+    if (key && NUT[key]) {
+      const n = NUT[key];
+      acc.kcal += g * n.kcal / 100; acc.p += g * n.p / 100; acc.c += g * n.c / 100; acc.f += g * n.f / 100;
+    }
+  }
+  // applies per-recipe user overrides (removed ingredients, edited quantities) to the
+  // recipe's base ingredient list, carrying the original array index along as _idx
+  function effectiveIngredients(r, overrides) {
+    const ov = overrides || {};
+    const out = [];
+    r.ingredients.forEach((ing, idx) => {
+      const o = ov[idx];
+      if (o && o.removed) return;
+      if (o && o.amount !== undefined) out.push(Object.assign({}, ing, { a: o.amount, _idx: idx }));
+      else out.push(Object.assign({}, ing, { _idx: idx }));
+    });
+    return out;
+  }
+  // main-dish nutrition only -- single-pot carbs (fried rice, pasta bolognese) are already
+  // ordinary ingredients here and count normally; there is no separate "side" ingredient anymore
+  function computeNutrition(r, scale, overrides) {
+    const main = emptyNut();
+    effectiveIngredients(r, overrides).forEach(ing => {
+      if (ing.a === null) return;
+      addToNut(main, ing, ing.a * scale);
+    });
+    return main;
+  }
+  function computeSideNut(sideSel) {
+    const out = emptyNut();
+    if (!sideSel) return out;
+    const cfg = sideTypeByKey[sideSel.type];
+    if (!cfg) return out;
+    const n = NUT[cfg.nut];
+    const g = sideSel.grams;
+    out.totalG = g; out.kcal = g * n.kcal / 100; out.p = g * n.p / 100; out.c = g * n.c / 100; out.f = g * n.f / 100;
+    return out;
+  }
+
+  const recipes = [
+    { id:"r1", cat:"Breakfasts", title:"Masala Egg Bhurji + Toast + Milk", price:1.00, sidesEligible:true,
+      ingredients:[
+        {a:4,u:"",n:"eggs",type:"egg"},
+        {a:0.5,u:"",n:"onion, diced",type:"onion",note:"diced"},
+        {a:1,u:"",n:"tomato, diced",type:"tomato",note:"diced"},
+        {a:0.5,u:"tsp",n:"cumin seeds"},{a:0.25,u:"tsp",n:"turmeric"},{a:0.5,u:"tsp",n:"chili powder"},
+        {a:0.25,u:"tsp",n:"salt"},{a:1,u:"tsp",n:"oil"},{a:240,u:"ml",n:"milk"}
+      ],
+      steps:[
+        "Crack the eggs into a bowl, season with the salt, and whisk lightly.",
+        "Dice the onion and tomato.",
+        "Heat the oil in a pan over medium heat. Add the cumin seeds and let them pop, about 30 seconds.",
+        "Add the onion and cook, stirring, until golden, 3–4 minutes.",
+        "Add the tomato, turmeric, and chili powder. Cook until the tomato softens and the oil starts to separate, 2–3 minutes.",
+        "Pour in the whisked eggs. Let them sit a few seconds, then fold gently with a spatula into soft curds. Cook until just set but still a little glossy, 1–2 minutes.",
+        "Plate with the milk on the side. Add toast or another side below if you want one."
+      ] },
+
+    { id:"r2", cat:"Breakfasts", title:"Boiled Eggs, Banana & Whey Breakfast", price:1.20,
+      ingredients:[
+        {a:4,u:"",n:"boiled eggs",type:"egg"},
+        {a:1,u:"",n:"banana",type:"banana"},
+        {a:240,u:"ml",n:"milk"},
+        {a:30,u:"g",n:"whey protein powder (1 scoop)"},
+        {a:2,u:"",n:"slices bread",type:"bread"},
+        {a:null,u:"",n:"chili flakes, pepper, salt, to season"}
+      ],
+      steps:[
+        "Boil the eggs — about 8–10 minutes from cold water for firm yolks, less for a softer set.",
+        "Cool briefly under cold water, then peel.",
+        "Season with chili flakes, pepper, and salt to taste, if you like.",
+        "Mix the whey protein powder into the milk (or into water instead, if you'd rather keep it separate).",
+        "Toast the bread.",
+        "Serve the eggs, banana, toast, and whey shake together. This is the fixed daily breakfast — same every day."
+      ] },
+
+    { id:"r3", cat:"Veg Mains", title:"Red Dal & Grilling Cheese Tadka with Spinach", price:1.10, sidesEligible:true,
+      ingredients:[
+        {a:250,u:"g",n:"cooked dal (batch)"},{a:150,u:"g",n:"grilling cheese (halloumi-style), cubed"},{a:1,u:"tbsp",n:"oil"},
+        {a:1,u:"tsp",n:"cumin seeds"},
+        {a:3,u:"",n:"garlic cloves, sliced",type:"garlic",note:"sliced"},
+        {a:0.5,u:"",n:"onion, diced",type:"onion",note:"diced"},
+        {a:1,u:"",n:"tomato, diced",type:"tomato",note:"diced"},
+        {a:0.5,u:"tsp",n:"chili powder"},{a:0.5,u:"tsp",n:"coriander powder"},
+        {a:0.25,u:"tsp",n:"salt"},{a:100,u:"g",n:"frozen spinach or peas"}
+      ],
+      steps:[
+        "Warm the cooked dal (batch) gently in a small pot over low heat.",
+        "Dice the onion and tomato, and slice the garlic.",
+        "In a separate pan, heat the oil. Add the cumin seeds and let them pop.",
+        "Add the garlic and onion, and cook until golden.",
+        "Add the tomato, chili powder, and coriander powder. Cook until the tomato breaks down and the oil separates.",
+        "Push the masala to one side and lightly pan-fry the grilling cheese cubes in the same pan until golden on a couple of sides.",
+        "Pour the tadka and cheese straight into the warmed dal and stir through gently, keeping the cubes mostly intact.",
+        "Fold in the spinach (or peas) and the salt, and simmer 2–3 minutes until wilted and heated through. Go easy on the salt here — the cheese is already salty.",
+        "Serve with rice or another side below."
+      ] },
+
+    { id:"r4", cat:"Protein Mains", title:"Seared Chicken with Rice + Broccoli", price:0.20, tracked:true, sidesEligible:true, cycleOrder:7, cycleDays:"~3–4 days",
+      ingredients:[
+        {a:150,u:"g",n:"chicken breast"},{a:200,u:"g",n:"broccoli or cauliflower"},
+        {a:3,u:"",n:"garlic cloves",type:"garlic"},
+        {a:0.5,u:"tsp",n:"cumin"},{a:0.5,u:"tsp",n:"chili"},
+        {a:null,u:"",n:"seasoning"},{a:1,u:"tsp",n:"oil"},{a:0.25,u:"tsp",n:"turmeric"},{a:50,u:"ml",n:"water"}
+      ],
+      steps:[
+        "Pat the chicken breast dry and season lightly.",
+        "Get a pan smoking hot with the oil.",
+        "Sear the chicken undisturbed for 3 minutes per side, then remove and rest 2 minutes before slicing.",
+        "In the same pan, add the broccoli (or cauliflower), garlic, turmeric, cumin, chili, and the water. Cover and steam 4–5 minutes until just tender.",
+        "Slice the rested chicken and plate with the vegetables. Add rice or another side below if you want one."
+      ] },
+
+    { id:"r5", cat:"Protein Mains", title:"Masala Chicken with Cauliflower + Bread", price:0.25, tracked:true, sidesEligible:true, cycleOrder:3, cycleDays:"~3–4 days",
+      ingredients:[
+        {a:150,u:"g",n:"chicken, diced"},{a:200,u:"g",n:"cauliflower (or 250g cabbage)"},
+        {a:1,u:"",n:"onion",type:"onion"},
+        {a:2,u:"",n:"tomatoes",type:"tomato"},
+        {a:4,u:"",n:"garlic cloves",type:"garlic"},
+        {a:0.5,u:"tsp",n:"cumin seeds"},
+        {a:0.5,u:"tsp",n:"turmeric"},{a:1,u:"tsp",n:"coriander powder"},{a:0.5,u:"tsp",n:"chili powder"},
+        {a:0.5,u:"tsp",n:"garam masala"},{a:1,u:"tbsp",n:"oil"},{a:null,u:"",n:"salt"}
+      ],
+      steps:[
+        "Dice the onion, tomatoes, and chicken; mince the garlic.",
+        "Heat the oil in a pan. Cook the onion until golden, 4–5 minutes.",
+        "Add the garlic, then the tomatoes, turmeric, coriander powder, and chili powder. Cook until the tomatoes break down and the oil separates.",
+        "Add the chicken and coat it well in the masala. Cook 2–3 minutes until it starts to color.",
+        "Add the cauliflower (or cabbage) and a splash of water if needed. Cover and cook 10–12 minutes, stirring occasionally, until the chicken is cooked through and the vegetable is tender.",
+        "Stir in the garam masala and salt to finish.",
+        "Serve with bread or another side below."
+      ] },
+
+    { id:"r6", cat:"Protein Mains", title:"Spiced Chicken with Spinach + Bread", price:0.25, tracked:true, sidesEligible:true, cycleOrder:5, cycleDays:"~3–4 days",
+      ingredients:[
+        {a:150,u:"g",n:"chicken, strips"},{a:200,u:"g",n:"spinach"},
+        {a:1,u:"",n:"onion",type:"onion"},
+        {a:4,u:"",n:"garlic cloves",type:"garlic"},
+        {a:0.5,u:"tsp",n:"cumin"},{a:0.25,u:"tsp",n:"turmeric"},
+        {a:0.5,u:"tsp",n:"chili"},{a:0.25,u:"tsp",n:"garam masala"},{a:1,u:"tsp",n:"oil"},
+        {a:null,u:"",n:"salt"}
+      ],
+      steps:[
+        "Cut the chicken into strips.",
+        "Heat the oil in a pan and sear the chicken until browned and cooked through. Set aside.",
+        "In the same pan, add the onion and garlic and cook until soft.",
+        "Add the spinach, cumin, turmeric, chili, and garam masala. Cook, stirring, until the spinach wilts down.",
+        "Fold the chicken back in and toss to coat. Season with salt.",
+        "Serve with bread or another side below."
+      ] },
+
+    { id:"r7", cat:"Protein Mains", title:"Chicken + Cabbage Stir Fry + Bread", price:0.30, tracked:true, sidesEligible:true, cycleOrder:6, cycleDays:"~3–4 days",
+      ingredients:[
+        {a:100,u:"g",n:"chicken, strips"},{a:250,u:"g",n:"cabbage"},{a:100,u:"g",n:"carrot"},
+        {a:1,u:"",n:"onion",type:"onion"},
+        {a:3,u:"",n:"garlic cloves",type:"garlic"},
+        {a:0.5,u:"tsp",n:"cumin"},{a:0.5,u:"tsp",n:"chili"},
+        {a:null,u:"",n:"seasoning"},{a:1,u:"tsp",n:"oil"}
+      ],
+      steps:[
+        "Cut the chicken into strips; shred the cabbage; julienne the carrot; slice the onion and garlic.",
+        "Heat the oil in a wok or wide pan over high heat.",
+        "Add the chicken and stir-fry until nearly cooked through, 2–3 minutes.",
+        "Add the onion, garlic, carrot, and cabbage. Keep the heat high and stir-fry, letting the cabbage char slightly at the edges before stirring, about 10 minutes total.",
+        "Season with cumin, chili, and salt/pepper to taste.",
+        "Serve with bread or another side below."
+      ] },
+
+    { id:"r9", cat:"Protein Mains", title:"Canned Mackerel Masala with Potato", price:0.95, sidesEligible:true, cycleOrder:2, cycleDays:"~3–4 days",
+      ingredients:[
+        {a:1,u:"can",n:"mackerel, drained",type:"can"},{a:250,u:"g",n:"potato, boiled and chunked"},
+        {a:0.5,u:"",n:"onion",type:"onion"},
+        {a:1,u:"",n:"tomato",type:"tomato"},
+        {a:3,u:"",n:"garlic cloves",type:"garlic"},
+        {a:0.5,u:"tsp",n:"turmeric"},
+        {a:0.5,u:"tsp",n:"chili"},{a:0.25,u:"tsp",n:"cumin"},{a:1,u:"tsp",n:"oil"},{a:null,u:"",n:"salt"}
+      ],
+      steps:[
+        "Boil the potato until just tender, then chunk it.",
+        "Dice the onion and tomato, and mince the garlic.",
+        "Heat the oil in a pan. Cook the onion until soft and starting to color.",
+        "Add the garlic, tomato, turmeric, chili, and cumin. Cook until the tomato breaks down.",
+        "Add the potato and stir to coat it in the masala, cooking 2–3 minutes.",
+        "Fold in the drained mackerel gently, keeping the chunks intact. Warm through for 2 minutes.",
+        "Season with salt. This one's already got potato in it, but add rice or bread below if you want more carbs with it."
+      ] },
+
+    { id:"r10", cat:"Protein Mains", title:"High-Protein Chicken Skillet", price:null, sidesEligible:true, cycleOrder:8, cycleDays:"~3–4 days",
+      ingredients:[
+        {a:280,u:"g",n:"chicken, diced"},
+        {a:1,u:"",n:"onion",type:"onion"},
+        {a:1,u:"",n:"tomato",type:"tomato"},
+        {a:3,u:"",n:"garlic cloves",type:"garlic"},
+        {a:100,u:"g",n:"spinach"},{a:0.5,u:"tsp",n:"cumin seeds"},
+        {a:0.25,u:"tsp",n:"turmeric"},{a:0.5,u:"tsp",n:"chili powder"},{a:0.25,u:"tsp",n:"garam masala"},
+        {a:1.5,u:"tbsp",n:"oil"},{a:null,u:"",n:"salt"}
+      ],
+      steps:[
+        "Dice the chicken, onion, and tomato; mince the garlic.",
+        "Heat the oil in a skillet. Sear the chicken until cooked through and lightly browned. Set aside.",
+        "In the same skillet, cook the onion and garlic until soft.",
+        "Add the tomato, cumin, turmeric, chili, and garam masala. Cook until the tomato softens.",
+        "Add the spinach and let it wilt down.",
+        "Fold the chicken back in and mix everything together. Season with salt and serve immediately."
+      ] },
+
+    { id:"r11", cat:"Protein Mains", title:"Chicken & Potato Masala", price:0.35, tracked:true, sidesEligible:true, cycleOrder:1, cycleDays:"~3–4 days",
+      ingredients:[
+        {a:150,u:"g",n:"chicken, diced"},{a:200,u:"g",n:"potato, cubed"},
+        {a:1,u:"",n:"onion",type:"onion"},
+        {a:2,u:"",n:"tomatoes",type:"tomato"},
+        {a:4,u:"",n:"garlic cloves",type:"garlic"},
+        {a:0.5,u:"tsp",n:"cumin seeds"},
+        {a:0.5,u:"tsp",n:"turmeric"},{a:1,u:"tsp",n:"coriander powder"},{a:0.5,u:"tsp",n:"chili powder"},
+        {a:0.25,u:"tsp",n:"garam masala"},{a:1,u:"tbsp",n:"oil"},{a:null,u:"",n:"salt"},{a:100,u:"ml",n:"water"}
+      ],
+      steps:[
+        "Dice the chicken and potato; dice the onion and tomatoes; mince the garlic.",
+        "Heat the oil in a pan. Color the chicken on most sides without cooking it through, then set aside.",
+        "In the same pan, cook the onion until golden, then add the garlic, tomatoes, cumin, turmeric, coriander powder, and chili powder. Cook until the oil separates.",
+        "Return the chicken to the pan along with the potato and the water. Cover and simmer 12–15 minutes, stirring occasionally, until the chicken is cooked through and the potato is tender.",
+        "Stir in the garam masala and salt to finish."
+      ] },
+
+    { id:"r18", cat:"Protein Mains", title:"Chicken & Pinto Bean Masala", price:0.55, sidesEligible:true, cycleOrder:4, cycleDays:"~3–4 days",
+      ingredients:[
+        {a:150,u:"g",n:"chicken, diced"},
+        {a:40,u:"g",n:"dry pinto beans (Wachtelbohnen), soaked overnight"},
+        {a:1,u:"",n:"onion",type:"onion"},
+        {a:1,u:"",n:"tomato",type:"tomato"},
+        {a:3,u:"",n:"garlic cloves",type:"garlic"},
+        {a:0.5,u:"tsp",n:"cumin seeds"},{a:0.5,u:"tsp",n:"turmeric"},
+        {a:1,u:"tsp",n:"coriander powder"},{a:0.5,u:"tsp",n:"chili powder"},
+        {a:0.5,u:"tsp",n:"garam masala"},{a:1,u:"tbsp",n:"oil"},
+        {a:null,u:"",n:"salt"},{a:200,u:"ml",n:"water"}
+      ],
+      steps:[
+        "The night before (or at least 6–8 hours ahead), soak the dry pinto beans in plenty of water.",
+        "Drain the soaked beans. Dice the chicken, onion, and tomato; mince the garlic.",
+        "Heat the oil in a pot. Add the cumin seeds, then the onion, and cook until golden.",
+        "Add the garlic, tomato, turmeric, coriander powder, and chili powder. Cook until the tomato breaks down and the oil separates.",
+        "Add the drained beans and the water. Cover and simmer 35–40 minutes until the beans are nearly tender — dry beans need this long even after soaking.",
+        "Add the diced chicken, stir in, and simmer uncovered 10–12 minutes more until the chicken is cooked through and the beans are fully tender, splashing in a little more water if it dries out.",
+        "Stir in the garam masala and salt to finish.",
+        "Serve as is, or add rice, bread, or another side below."
+      ] },
+
+    { id:"r12", cat:"Veg Mains", title:"Lentil Pasta Bolognese", price:0.80,
+      ingredients:[
+        {a:90,u:"g",n:"pasta"},{a:140,u:"g",n:"dry red lentils"},
+        {a:0.5,u:"",n:"onion",type:"onion"},
+        {a:2,u:"",n:"tomatoes",type:"tomato"},
+        {a:3,u:"",n:"garlic cloves",type:"garlic"},
+        {a:0.5,u:"tsp",n:"cumin (or Italian herbs)"},{a:0.5,u:"tsp",n:"chili"},
+        {a:null,u:"",n:"seasoning"},{a:1,u:"tsp",n:"oil"},{a:400,u:"ml",n:"water"}
+      ],
+      steps:[
+        "Dice the onion and tomatoes, and mince the garlic.",
+        "In a pot, heat the oil and cook the onion until soft.",
+        "Add the garlic, tomatoes, cumin (or Italian herbs), and chili. Cook until the tomatoes break down.",
+        "Stir in the dry red lentils and the water. Cover and simmer 25–30 minutes, stirring occasionally, until the lentils are soft — mash them lightly into the sauce with the back of a spoon. Add a splash more water if it thickens too fast before the lentils are done.",
+        "Meanwhile, cook the pasta in salted boiling water until al dente, then drain.",
+        "Season the sauce to taste, toss the pasta through, and serve. Both the lentils and pasta are mixed into the sauce itself here, so they're already counted in the totals above."
+      ] },
+
+    { id:"r13", cat:"Veg Mains", title:"Masala Brinjal, Dal & Grilling Cheese", price:0.95, sidesEligible:true,
+      ingredients:[
+        {a:1,u:"",n:"large brinjal",type:"brinjal"},{a:200,u:"g",n:"cooked dal (batch)"},{a:120,u:"g",n:"grilling cheese (halloumi-style), cubed"},
+        {a:0.5,u:"",n:"onion",type:"onion"},
+        {a:0.5,u:"",n:"tomato",type:"tomato"},
+        {a:3,u:"",n:"garlic cloves",type:"garlic"},
+        {a:0.5,u:"tsp",n:"cumin seeds"},
+        {a:0.5,u:"tsp",n:"chili"},{a:0.25,u:"tsp",n:"turmeric"},{a:1,u:"tsp",n:"oil"},{a:null,u:"",n:"salt"}
+      ],
+      steps:[
+        "Pierce the brinjal a few times and roast it whole (oven, open flame, or a hot dry pan) until the skin blisters and the flesh is fully soft.",
+        "Let it cool slightly, then peel and scoop out the flesh, mashing it roughly.",
+        "Warm the cooked dal (batch) gently in a pot.",
+        "Dice the onion and tomato, and mince the garlic.",
+        "Heat the oil in a small pan. Add the cumin seeds, then the garlic and onion, and cook until golden.",
+        "Add the tomato, turmeric, and chili. Cook until softened and the oil separates.",
+        "Push the masala to one side and lightly pan-fry the grilling cheese cubes until golden on a couple of sides.",
+        "Fold in the mashed brinjal flesh and the cheese, then pour everything over the warmed dal and stir through gently. Go easy on any extra salt — the cheese is already salty.",
+        "Traditionally eaten with rice or roti — add one below if you want it."
+      ] },
+
+    { id:"r17", cat:"Veg Mains", title:"Wachtelbohnen & Grilling Cheese Masala with Potato & Carrot", price:1.15,
+      ingredients:[
+        {a:90,u:"g",n:"dry Wachtelbohnen / pinto beans, soaked overnight"},
+        {a:120,u:"g",n:"grilling cheese (halloumi-style), cubed"},
+        {a:100,u:"g",n:"potato, diced"},
+        {a:75,u:"g",n:"carrot, diced"},
+        {a:0.5,u:"",n:"onion",type:"onion"},
+        {a:1,u:"",n:"tomato",type:"tomato"},
+        {a:2,u:"",n:"garlic cloves",type:"garlic"},
+        {a:0.5,u:"tsp",n:"cumin seeds"},{a:0.5,u:"tsp",n:"turmeric"},
+        {a:0.5,u:"tsp",n:"coriander powder"},{a:0.5,u:"tsp",n:"chili powder"},
+        {a:0.25,u:"tsp",n:"garam masala"},{a:1,u:"tbsp",n:"oil"},
+        {a:null,u:"",n:"salt, to taste"},{a:250,u:"ml",n:"water"}
+      ],
+      steps:[
+        "The night before (or at least 6–8 hours ahead), soak the dry beans in plenty of water.",
+        "Drain the soaked beans. Dice the potato, carrot, onion, and tomato; mince the garlic.",
+        "Heat the oil in a pan. Add the cumin seeds and let them pop.",
+        "Add the onion and cook until golden.",
+        "Add the garlic (and ginger powder, if using), tomato, turmeric, coriander powder, and chili powder. Cook until the oil separates.",
+        "Add the drained beans and the water. Cover and simmer 35–40 minutes until the beans are nearly tender.",
+        "Stir in the potato and carrot, and continue simmering uncovered 12–15 minutes until the vegetables and beans are both tender and the stew has thickened.",
+        "Push everything to one side and lightly pan-fry the grilling cheese cubes until golden on a couple of sides, then fold them in.",
+        "Stir in the garam masala and salt to taste, going easy since the cheese is already salty. Add rice or bread below if you want it."
+      ] },
+
+    { id:"r14", cat:"Weekend Feasts", title:"Masala Rice with Egg & Peas", price:0.85,
+      ingredients:[
+        {a:100,u:"g",n:"cooked rice (batch)"},{a:2,u:"",n:"eggs, beaten",type:"egg"},{a:50,u:"g",n:"frozen peas"},
+        {a:50,u:"g",n:"carrot"},
+        {a:0.25,u:"",n:"onion",type:"onion"},
+        {a:2,u:"",n:"garlic cloves",type:"garlic"},
+        {a:0.5,u:"tsp",n:"cumin seeds"},
+        {a:0.25,u:"tsp",n:"turmeric"},{a:0.5,u:"tsp",n:"chili powder"},{a:1,u:"tsp",n:"oil"},{a:null,u:"",n:"salt"}
+      ],
+      steps:[
+        "Dice the carrot and onion, and mince the garlic.",
+        "Heat the oil in a pan or wok. Add the onion, carrot, and garlic, and cook until softened, 2–3 minutes.",
+        "Push the vegetables to one side, pour in the beaten eggs, and scramble them in the empty space until just set.",
+        "Add the peas, cumin seeds, turmeric, and chili powder. Stir everything together.",
+        "Add the cooked rice and toss well, breaking up any clumps, until heated through and lightly toasted at the edges, 3–4 minutes.",
+        "Season with salt and serve. The rice is cooked into the dish itself here, so it's already counted in the totals above."
+      ] },
+
+    { id:"r15", cat:"Weekend Feasts", title:"Aloo Gobi (Potato & Cauliflower)", price:0.93, sidesEligible:true,
+      ingredients:[
+        {a:200,u:"g",n:"potato"},{a:200,u:"g",n:"cauliflower"},
+        {a:1,u:"",n:"onion",type:"onion"},
+        {a:1,u:"",n:"tomato",type:"tomato"},
+        {a:3,u:"",n:"garlic cloves",type:"garlic"},
+        {a:0.5,u:"tsp",n:"cumin seeds"},{a:0.5,u:"tsp",n:"turmeric"},
+        {a:0.5,u:"tsp",n:"coriander powder"},{a:0.25,u:"tsp",n:"chili powder"},{a:1,u:"tbsp",n:"oil"},
+        {a:null,u:"",n:"salt"},{a:50,u:"ml",n:"water"}
+      ],
+      steps:[
+        "Cut the potato and cauliflower into similar-sized pieces.",
+        "Dice the onion and tomato, and mince the garlic.",
+        "Heat the oil in a pan. Add the cumin seeds, then the onion and garlic, and cook until golden.",
+        "Add the tomato, turmeric, coriander powder, and chili powder. Cook until the tomato softens.",
+        "Add the potato, cauliflower, and water. Cover and simmer 15–18 minutes, stirring occasionally, until both vegetables are tender.",
+        "Season with salt. This one's low in protein on its own — pair it with a protein main, and add rice or bread below if you want it."
+      ] },
+
+    { id:"r16", cat:"Weekend Feasts", title:"Carrot-Cabbage Sabzi", price:0.35, sidesEligible:true,
+      ingredients:[
+        {a:150,u:"g",n:"cabbage"},{a:100,u:"g",n:"carrot"},
+        {a:0.5,u:"",n:"onion",type:"onion"},
+        {a:0.5,u:"tsp",n:"cumin seeds"},
+        {a:null,u:"",n:"turmeric, pinch"},{a:1,u:"tsp",n:"oil"},{a:null,u:"",n:"salt"}
+      ],
+      steps:[
+        "Shred the cabbage, julienne or grate the carrot, and slice the onion.",
+        "Heat the oil in a pan. Add the cumin seeds and a pinch of turmeric.",
+        "Add the onion and stir-fry briefly.",
+        "Add the carrot and cabbage. Stir-fry on high heat 5–6 minutes until just tender-crisp.",
+        "Season with salt and serve."
+      ] },
+
+    { id:"r19", cat:"Weekend Feasts", title:"Kerala-Style Beef Roast", price:null, sidesEligible:true,
+      ingredients:[
+        {a:150,u:"g",n:"beef, thinly sliced or cubed"},
+        {a:1,u:"",n:"onion",type:"onion"},
+        {a:3,u:"",n:"garlic cloves",type:"garlic"},
+        {a:0.5,u:"tsp",n:"turmeric"},{a:1,u:"tsp",n:"coriander powder"},{a:0.5,u:"tsp",n:"chili powder"},
+        {a:1,u:"tsp",n:"black pepper, crushed"},{a:0.5,u:"tsp",n:"garam masala"},
+        {a:1.5,u:"tbsp",n:"oil"},{a:null,u:"",n:"salt"}
+      ],
+      steps:[
+        "Slice the beef thinly against the grain, or cube it — thin slices give the classic roast texture, cubes work too if you prefer more bite.",
+        "Dice the onion; mince the garlic (or use garlic and ginger powder).",
+        "Heat the oil in a heavy pan. Add the onion and cook slowly until deeply golden and starting to caramelize, 8–10 minutes — this base is what gives the dish its depth.",
+        "Add the garlic (and ginger powder), turmeric, coriander powder, and chili powder. Cook 1–2 minutes until fragrant.",
+        "Add the beef and stir to coat in the masala. Cook over medium-high heat until it releases its juices.",
+        "Cover and simmer on low heat 40–50 minutes until the beef is tender, stirring occasionally and adding a splash of water if it catches.",
+        "Uncover, turn the heat up, and cook, stirring frequently, until most of the liquid has evaporated and the beef starts to fry in the remaining oil, taking on a dark, roasted look, 8–10 minutes.",
+        "Stir in the crushed black pepper and garam masala, and season with salt. Cook 1–2 minutes more to let the pepper toast slightly.",
+        "Serve as is, or add rice or bread from the optional side below."
+      ] },
+
+    { id:"r20", cat:"Weekend Feasts", title:"Chicken Biryani", price:null,
+      ingredients:[
+        {a:150,u:"g",n:"chicken, diced"},
+        {a:75,u:"g",n:"basmati rice, dry"},
+        {a:1,u:"",n:"onion, thinly sliced",type:"onion",note:"thinly sliced"},
+        {a:1,u:"",n:"tomato",type:"tomato"},
+        {a:3,u:"",n:"garlic cloves",type:"garlic"},
+        {a:0.5,u:"tsp",n:"cumin seeds"},{a:0.5,u:"tsp",n:"turmeric"},
+        {a:1,u:"tsp",n:"coriander powder"},{a:0.5,u:"tsp",n:"chili powder"},{a:1,u:"tsp",n:"garam masala"},
+        {a:1.5,u:"tbsp",n:"oil"},{a:null,u:"",n:"salt"},{a:150,u:"ml",n:"water"}
+      ],
+      steps:[
+        "Rinse the rice until the water runs mostly clear, then soak 20–30 minutes and drain.",
+        "Slice the onion, dice the tomato, and mince the garlic.",
+        "Heat the oil in a heavy pot. Add the cumin seeds, then the onion, and fry until deep golden — this takes longer than a usual tadka, about 8–10 minutes, since a well-fried onion base is what makes biryani taste right. A few whole spices here (cinnamon stick, cloves, cardamom pods) are classic if you have them, but not essential.",
+        "Add the garlic, tomato, turmeric, coriander powder, and chili powder. Cook until the tomato breaks down.",
+        "Add the chicken and coat it well in the masala. Cook 4–5 minutes until it starts to color.",
+        "In a separate pot, bring the salted water to a boil and parboil the drained rice about 5 minutes — it should still have a bite in the center. Drain.",
+        "Layer the parboiled rice over the chicken masala. Sprinkle over the garam masala.",
+        "Cover tightly (a layer of foil under the lid helps seal in the steam) and cook on the lowest possible heat 20–25 minutes, undisturbed, until the rice is fully tender and the chicken is cooked through.",
+        "Rest off the heat for 5 minutes, then fluff gently with a fork, mixing the rice and chicken layers together before serving. The rice is cooked into the dish itself here, so it's already counted in the totals above."
+      ] },
+
+    { id:"r21", cat:"Protein Boosters", title:"Daily Top-Up: Tuna & Cottage Cheese Bowl", price:1.30,
+      ingredients:[
+        {a:1,u:"can",n:"tuna in water, drained",type:"tuna_can"},
+        {a:150,u:"g",n:"cottage cheese (tvaroh)"},
+        {a:0.25,u:"tsp",n:"black pepper, crushed"},
+        {a:null,u:"",n:"salt, to taste"}
+      ],
+      steps:[
+        "Drain the tuna well.",
+        "Mix the tuna into the cottage cheese in a bowl.",
+        "Season with the black pepper and salt to taste.",
+        "Eat as is, or spread on bread or crackers if you want it more substantial. No cooking needed — this is meant to be quick."
+      ] },
+
+    { id:"r22", cat:"Breakfasts", title:"High-Protein Banana Whey Flour Pancakes", price:1.00,
+      ingredients:[
+        {a:2,u:"",n:"eggs",type:"egg"},
+        {a:1,u:"",n:"banana, mashed",type:"banana"},
+        {a:30,u:"g",n:"whey protein powder (1 scoop)"},
+        {a:40,u:"g",n:"flour"},
+        {a:30,u:"ml",n:"milk, splash (if needed to loosen the batter)"}
+      ],
+      steps:[
+        "Mash the banana smooth in a bowl.",
+        "Whisk in the eggs.",
+        "Stir in the whey protein powder and flour until no lumps remain, adding a splash of milk to loosen the batter to a pourable consistency.",
+        "Heat a lightly greased non-stick pan over medium heat.",
+        "Pour small pancakes, about 3–4 tbsp batter each, and cook 2–3 minutes per side until golden.",
+        "Serve immediately — a quick alternative to the usual breakfast on days you want something different."
+      ] },
+  ];
+
+  const byId = {};
+  recipes.forEach(r => byId[r.id] = r);
+
+  let state = {};
+  let currentId = null;
+  const sidePicking = {}; // transient UI state: recipeId -> side type key currently being configured
+  const editingIng = {}; // transient UI state: recipeId -> ingredient idx currently being edited
+  const root = document.getElementById("rb-root");
+  const body = document.getElementById("rb-body");
+  const headerTitle = document.getElementById("rb-header-title");
+  const headerSub = document.getElementById("rb-header-sub");
+
+  function getPrefs() {
+    if (!state.prefs) state.prefs = { weight: true, powder: true, tomatoPuree: false };
+    return state.prefs;
+  }
+
+  async function loadState() {
+    try {
+      const raw = localStorage.getItem("blaze-cookbook-state");
+      state = raw ? JSON.parse(raw) : {};
+    } catch (e) { state = {}; }
+    getPrefs();
+  }
+  function saveState() {
+    try { localStorage.setItem("blaze-cookbook-state", JSON.stringify(state)); } catch (e) {}
+  }
+  function getRecipeState(id) {
+    if (!state[id]) state[id] = { servings: 1, checked: {}, custom: [], customSeq: 0, side: null, overrides: {} };
+    if (!state[id].custom) state[id].custom = [];
+    if (state[id].customSeq === undefined) state[id].customSeq = 0;
+    if (state[id].side === undefined) state[id].side = null;
+    if (!state[id].overrides) state[id].overrides = {};
+    return state[id];
+  }
+
+  const FRACS = [
+    [0.125, "\u215B"], [0.25, "\u00BC"], [0.333, "\u2153"], [0.375, "\u215C"],
+    [0.5, "\u00BD"], [0.625, "\u215D"], [0.667, "\u2154"], [0.75, "\u00BE"], [0.875, "\u215E"]
+  ];
+  function fmtAmount(n) {
+    if (n === null || n === undefined) return "";
+    let whole = Math.floor(n + 1e-6);
+    let frac = n - whole;
+    if (frac < 0.03) return String(whole);
+    let best = null, bestDiff = 1;
+    FRACS.forEach(([v, sym]) => { const d = Math.abs(frac - v); if (d < bestDiff) { bestDiff = d; best = sym; } });
+    if (bestDiff < 0.045) return whole === 0 ? best : whole + best;
+    return String(Math.round(n * 100) / 100);
+  }
+  function formatWeight(g) {
+    let r;
+    if (g < 20) r = Math.round(g * 2) / 2;
+    else if (g < 1000) r = Math.round(g / 5) * 5;
+    else return (Math.round((g / 1000) * 100) / 100) + " kg";
+    if (r <= 0) r = 0.5;
+    return (r % 1 === 0 ? r : r.toFixed(1)) + " g";
+  }
+
+  function gramsForPlain(ing, amount) {
+    if (ing.type === "onion") return amount * GF.onion;
+    if (ing.type === "banana") return amount * GF.banana;
+    if (ing.type === "tomato") return amount * GF.tomato;
+    if (ing.type === "egg") return amount * GF.egg;
+    if (ing.type === "bread") return amount * GF.bread;
+    if (ing.type === "brinjal") return amount * GF.brinjal;
+    if (ing.type === "can") return amount * GF.can;
+    if (ing.type === "tuna_can") return amount * GF.can;
+    if (ing.u === "g") return amount;
+    if (ing.u === "ml") return amount * GF.ml;
+    if (ing.u === "tsp") return amount * (isOil(ing) ? GF.tspOil : GF.tspSpice);
+    if (ing.u === "tbsp") return amount * (isOil(ing) ? GF.tbspOil : GF.tbspSpice);
+    return null;
+  }
+
+  function baseLabel(ing) {
+    if (ing.type === "onion") return "onion" + (ing.note ? ", " + ing.note : "");
+    if (ing.type === "banana") return "banana";
+    if (ing.type === "tomato") return "tomato" + (ing.note ? ", " + ing.note : "");
+    if (ing.type === "bread") return "bread";
+    if (ing.type === "tuna_can") return "tuna, drained";
+    if (ing.type === "brinjal") return "brinjal";
+    return ing.n;
+  }
+
+  function buildRows(r, scale, prefs, overrides) {
+    const rows = [];
+    effectiveIngredients(r, overrides).forEach(ing => {
+      const idx = ing._idx;
+      if (ing.type === "garlic") {
+        const cloves = ing.a * scale;
+        let html;
+        if (prefs.powder) {
+          const tsp = cloves * 0.125;
+          if (prefs.weight) html = `<span class="rb-ing-amt">${formatWeight(tsp * GF.garlicPowderTsp)}</span> garlic powder`;
+          else html = `<span class="rb-ing-amt">${fmtAmount(tsp)} tsp</span> garlic powder`;
+        } else {
+          if (prefs.weight) html = `<span class="rb-ing-amt">${formatWeight(cloves * GF.garlicClove)}</span> garlic${ing.note ? ", " + ing.note : ""}`;
+          else html = `<span class="rb-ing-amt">${fmtAmount(cloves)}${ing.u ? " " + ing.u : ""}</span> ${ing.n}`;
+        }
+        rows.push({ key: String(idx), html, editIdx: idx });
+        if (prefs.powder) {
+          const tsp = cloves * 0.125;
+          let gHtml;
+          if (prefs.weight) gHtml = `<span class="rb-ing-amt">${formatWeight(tsp * GF.gingerPowderTsp)}</span> ginger powder`;
+          else gHtml = `<span class="rb-ing-amt">${fmtAmount(tsp)} tsp</span> ginger powder`;
+          rows.push({ key: idx + "_ginger", html: gHtml });
+        }
+        return;
+      }
+      if (ing.type === "tomato" && prefs.tomatoPuree) {
+        const units = ing.a * scale;
+        const tbsp = units * TOMATO_PUREE_TBSP_PER_UNIT;
+        let html;
+        if (prefs.weight) html = `<span class="rb-ing-amt">${formatWeight(tbsp * GF.tomatoPureeTbsp)}</span> tomato puree`;
+        else html = `<span class="rb-ing-amt">${fmtAmount(tbsp)} tbsp</span> tomato puree`;
+        rows.push({ key: String(idx), html, editIdx: idx });
+        return;
+      }
+      if (ing.a === null) { rows.push({ key: String(idx), html: ing.n, editIdx: idx }); return; }
+      const scaled = ing.a * scale;
+      if (prefs.weight) {
+        const g = gramsForPlain(ing, scaled);
+        if (g !== null) {
+          rows.push({ key: String(idx), html: `<span class="rb-ing-amt">${formatWeight(g)}</span> ${baseLabel(ing)}`, editIdx: idx });
+          return;
+        }
+      }
+      rows.push({ key: String(idx), html: `<span class="rb-ing-amt">${fmtAmount(scaled)}${ing.u ? " " + ing.u : ""}</span> ${ing.n}`, editIdx: idx });
+    });
+    return rows;
+  }
+
+  function togglePanelHtml(inline) {
+    const p = getPrefs();
+    return `
+      <div class="rb-toggle-panel${inline ? " rb-toggle-panel-inline" : ""}">
+        ${inline ? "" : '<p class="rb-toggle-heading">Measurement preferences</p>'}
+        <label class="rb-toggle">
+          <span class="rb-toggle-label">Ingredient weights (g/kg)
+            <span class="rb-toggle-sub">Converts counts, tsp &amp; tbsp to grams</span>
+          </span>
+          <span class="rb-switch-wrap">
+            <input type="checkbox" class="rb-switch-input" data-pref="weight" ${p.weight ? "checked" : ""}>
+            <span class="rb-switch"></span>
+          </span>
+        </label>
+        <label class="rb-toggle">
+          <span class="rb-toggle-label">Garlic &amp; ginger as powder
+            <span class="rb-toggle-sub">Converts cloves, adds matching ginger</span>
+          </span>
+          <span class="rb-switch-wrap">
+            <input type="checkbox" class="rb-switch-input" data-pref="powder" ${p.powder ? "checked" : ""}>
+            <span class="rb-switch"></span>
+          </span>
+        </label>
+        <label class="rb-toggle">
+          <span class="rb-toggle-label">Tomato as puree
+            <span class="rb-toggle-sub">Converts whole tomatoes to tbsp of puree</span>
+          </span>
+          <span class="rb-switch-wrap">
+            <input type="checkbox" class="rb-switch-input" data-pref="tomatoPuree" ${p.tomatoPuree ? "checked" : ""}>
+            <span class="rb-switch"></span>
+          </span>
+        </label>
+      </div>`;
+  }
+
+  function miniTogglePanelHtml(hasGarlic, hasTomato) {
+    const p = getPrefs();
+    let html = `<div class="rb-toggle-panel rb-toggle-panel-inline">
+      <label class="rb-toggle">
+        <span class="rb-toggle-label">Ingredient weights (g/kg)</span>
+        <span class="rb-switch-wrap">
+          <input type="checkbox" class="rb-switch-input" data-pref="weight" ${p.weight ? "checked" : ""}>
+          <span class="rb-switch"></span>
+        </span>
+      </label>`;
+    if (hasGarlic) {
+      html += `
+      <label class="rb-toggle">
+        <span class="rb-toggle-label">Garlic &amp; ginger as powder</span>
+        <span class="rb-switch-wrap">
+          <input type="checkbox" class="rb-switch-input" data-pref="powder" ${p.powder ? "checked" : ""}>
+          <span class="rb-switch"></span>
+        </span>
+      </label>`;
+    }
+    if (hasTomato) {
+      html += `
+      <label class="rb-toggle">
+        <span class="rb-toggle-label">Tomato as puree</span>
+        <span class="rb-switch-wrap">
+          <input type="checkbox" class="rb-switch-input" data-pref="tomatoPuree" ${p.tomatoPuree ? "checked" : ""}>
+          <span class="rb-switch"></span>
+        </span>
+      </label>`;
+    }
+    html += `</div>`;
+    return html;
+  }
+
+  function totalRowCount(r, prefs, st) {
+    const eff = effectiveIngredients(r, st.overrides);
+    const base = eff.filter(i => i.a !== null).length;
+    const garlicCount = eff.filter(i => i.type === "garlic").length;
+    return base + (prefs.powder ? garlicCount : 0) + st.custom.length + (st.side ? 1 : 0);
+  }
+
+  function renderHome() {
+    headerTitle.textContent = "Blaze's Cook Book";
+    headerSub.textContent = "21 recipes from the batch-cooking system — tap one to cook.";
+    const prefs = getPrefs();
+    let html = togglePanelHtml(false);
+    CATS.forEach(cat => {
+      let items = recipes.filter(r => r.cat === cat);
+      if (!items.length) return;
+      const hasCycle = items.some(r => r.cycleOrder);
+      if (hasCycle) items = items.slice().sort((a, b) => (a.cycleOrder || 99) - (b.cycleOrder || 99));
+      html += `<h2 class="rb-cat-heading">${cat}</h2>`;
+      if (hasCycle) html += `<p class="rb-side-picker-label" style="margin:-2px 0 8px;">Cook one after another, ~3–4 days each, then repeat the cycle</p>`;
+      items.forEach(r => {
+        const st = getRecipeState(r.id);
+        const nut = computeNutrition(r, 1, st.overrides);
+        const total = totalRowCount(r, prefs, st);
+        const doneCount = Object.values(st.checked).filter(Boolean).length;
+        const checkNote = doneCount > 0
+          ? `<span class="rb-row-check">${doneCount}/${total} \u2713</span>` : "";
+        const cycleTag = r.cycleDays ? `<span class="rb-row-check" style="color:var(--muted);">${r.cycleDays}</span>` : "";
+        html += `
+          <button class="rb-row" data-open="${r.id}">
+            <span class="rb-row-main">
+              <span class="rb-row-title">${r.title}</span>
+              <span class="rb-row-meta">${Math.round(nut.kcal)} kcal &nbsp;\u00B7&nbsp; ${Math.round(nut.p)}g protein &nbsp;\u00B7&nbsp; ${Math.round(nut.totalG)}g</span>
+            </span>
+            ${checkNote}${cycleTag}
+            <span class="rb-chevron">\u203A</span>
+          </button>`;
+      });
+    });
+    body.innerHTML = html;
+  }
+
+  function statBox(num, label) {
+    return `<div class="rb-stat"><div class="rb-stat-num">${num}</div><div class="rb-stat-label">${label}</div></div>`;
+  }
+
+  function renderSideSection(r, st) {
+    if (!r.sidesEligible) return "";
+    const picking = sidePicking[r.id];
+    let html = `<h3 class="rb-section-label" style="margin-top:22px;">Optional side</h3>`;
+
+    if (st.side) {
+      const cfg = sideTypeByKey[st.side.type];
+      const n = NUT[cfg.nut];
+      const g = st.side.grams;
+      const kcal = g * n.kcal / 100, p = g * n.p / 100, c = g * n.c / 100, f = g * n.f / 100;
+      const checked = !!st.checked["side"];
+      html += `
+        <label class="rb-ing-row">
+          <input type="checkbox" class="rb-ing-check" data-key="side" ${checked ? "checked" : ""}>
+          <span class="rb-box"></span>
+          <span class="rb-ing-text"><span class="rb-ing-amt">${formatWeight(g)}</span> ${cfg.label.toLowerCase()} (${cfg.note})</span>
+          <button class="rb-custom-remove" data-side-remove="1" type="button">\u00D7</button>
+        </label>
+        <p class="rb-side-added-sub">Adds ${Math.round(kcal)} kcal &nbsp;\u00B7&nbsp; ${Math.round(p * 10) / 10}g protein &nbsp;\u00B7&nbsp; ${Math.round(c * 10) / 10}g carbs &nbsp;\u00B7&nbsp; ${Math.round(f * 10) / 10}g fat to the total.</p>`;
+    } else if (picking) {
+      const cfg = sideTypeByKey[picking];
+      html += `
+        <p class="rb-side-picker-label">${cfg.label} — pick an amount</p>
+        <div class="rb-side-input-panel">
+          <button class="rb-side-portion-btn" data-side-portion="1" type="button">1 portion — ~${cfg.portion}g (${cfg.note})</button>
+          <div class="rb-side-manual-row">
+            <input type="number" min="1" step="1" class="rb-side-manual-input" placeholder="e.g. 120">
+            <span>g</span>
+            <button class="rb-add-btn" data-side-manual-add="1" type="button">Add</button>
+          </div>
+          <button class="rb-side-cancel" data-side-cancel="1" type="button">Cancel</button>
+        </div>`;
+    } else {
+      html += `
+        <p class="rb-side-picker-label">Not part of the dish itself — add one if you want it with this meal</p>
+        <div class="rb-side-chips">
+          ${SIDE_TYPES.map(s => `<button class="rb-side-chip" data-side-chip="${s.key}" type="button">${s.label}</button>`).join("")}
+        </div>`;
+    }
+    return html;
+  }
+
+  function renderRecipe(id) {
+    const r = byId[id];
+    const st = getRecipeState(id);
+    const prefs = getPrefs();
+    const scale = st.servings;
+
+    headerTitle.textContent = r.title;
+    headerSub.textContent = r.cat + (r.cycleDays ? " — #" + r.cycleOrder + " of 8 in rotation, cook " + r.cycleDays : "");
+
+    const main = computeNutrition(r, scale, st.overrides);
+    const sideNut = computeSideNut(st.side);
+    const priceStr = r.price !== null
+      ? "\u20AC" + (r.price * scale).toFixed(2) + (r.tracked ? " (tracked)" : "")
+      : "\u2014";
+
+    const per100 = main.totalG > 0 ? {
+      kcal: main.kcal / main.totalG * 100, p: main.p / main.totalG * 100,
+      c: main.c / main.totalG * 100, f: main.f / main.totalG * 100
+    } : { kcal: 0, p: 0, c: 0, f: 0 };
+
+    const hasGarlic = r.ingredients.some(i => i.type === "garlic");
+    const hasTomato = r.ingredients.some(i => i.type === "tomato");
+    const rows = buildRows(r, scale, prefs, st.overrides);
+
+    function ingRowHtml(row) {
+      if (row.editIdx !== undefined && editingIng[id] === row.editIdx) {
+        const ing = r.ingredients[row.editIdx];
+        const ov = st.overrides[row.editIdx];
+        const curAmount = ov && ov.amount !== undefined ? ov.amount : ing.a;
+        if (ing.a === null) {
+          return `
+            <div class="rb-side-input-panel" style="margin:6px 0;">
+              <p class="rb-side-picker-label" style="margin:0;">${ing.n}</p>
+              <button class="rb-side-cancel" data-edit-remove="${row.editIdx}" type="button">Remove ingredient</button>
+              <button class="rb-side-cancel" data-edit-cancel="1" type="button">Cancel</button>
+            </div>`;
+        }
+        return `
+          <div class="rb-side-input-panel" style="margin:6px 0;">
+            <p class="rb-side-picker-label" style="margin:0;">${ing.n}</p>
+            <div class="rb-side-manual-row">
+              <input type="number" min="0" step="any" class="rb-edit-amount-input" value="${curAmount}">
+              <span>${ing.u || "count"}</span>
+            </div>
+            <button class="rb-side-portion-btn" data-edit-save="${row.editIdx}" type="button">Save</button>
+            <button class="rb-side-cancel" data-edit-remove="${row.editIdx}" type="button">Remove ingredient</button>
+            <button class="rb-side-cancel" data-edit-cancel="1" type="button">Cancel</button>
+          </div>`;
+      }
+      const checked = !!st.checked[row.key];
+      const editBtn = row.editIdx !== undefined
+        ? `<button class="rb-custom-remove" data-edit-ing="${row.editIdx}" type="button" aria-label="Edit or remove">\u270E</button>` : "";
+      return `
+        <label class="rb-ing-row">
+          <input type="checkbox" class="rb-ing-check" data-key="${row.key}" ${checked ? "checked" : ""}>
+          <span class="rb-box"></span>
+          <span class="rb-ing-text">${row.html}</span>
+          ${editBtn}
+        </label>`;
+    }
+    let mainIngHtml = rows.map(ingRowHtml).join("");
+
+    let removedHtml = "";
+    const removedIdxs = Object.keys(st.overrides).filter(k => st.overrides[k] && st.overrides[k].removed);
+    if (removedIdxs.length) {
+      removedHtml = `<p class="rb-side-picker-label" style="margin:10px 0 6px;">Removed — tap to restore:</p><div class="rb-side-chips">` +
+        removedIdxs.map(idx => `<button class="rb-side-chip" data-restore-ing="${idx}" type="button">${r.ingredients[idx].n}</button>`).join("") +
+        `</div>`;
+    }
+
+    let customHtml = "";
+    st.custom.forEach(c => {
+      const key = "custom_" + c.id;
+      const checked = !!st.checked[key];
+      customHtml += `
+        <label class="rb-ing-row">
+          <input type="checkbox" class="rb-ing-check" data-key="${key}" ${checked ? "checked" : ""}>
+          <span class="rb-box"></span>
+          <span class="rb-ing-text">${c.text}</span>
+          <button class="rb-custom-remove" data-remove-custom="${c.id}" type="button">\u00D7</button>
+        </label>`;
+    });
+
+    const total = totalRowCount(r, prefs, st);
+    const doneCount = Object.values(st.checked).filter(Boolean).length;
+
+    const stepsHtml = `<ol class="rb-steps">${r.steps.map((s, i) => `
+        <li class="rb-step"><span class="rb-step-num">${i + 1}</span><span class="rb-step-text">${s}</span></li>`).join("")}</ol>`;
+
+    const hasSide = st.side !== null;
+    const combined = hasSide ? {
+      totalG: main.totalG + sideNut.totalG, kcal: main.kcal + sideNut.kcal,
+      p: main.p + sideNut.p, c: main.c + sideNut.c, f: main.f + sideNut.f
+    } : null;
+
+    body.innerHTML = `
+      <button class="rb-back" data-back="1">\u2039 &nbsp;All recipes</button>
+      <h1 class="rb-recipe-title">${r.title}</h1>
+
+      <div class="rb-stats-grid">
+        ${statBox(Math.round(main.totalG) + "g", "weight")}
+        ${statBox(Math.round(main.kcal), "kcal")}
+        ${statBox(Math.round(main.p) + "g", "protein")}
+        ${statBox(Math.round(main.c) + "g", "carbs")}
+        ${statBox(Math.round(main.f) + "g", "fat")}
+        ${statBox(priceStr, "cost")}
+      </div>
+      <p class="rb-per100">Per 100g of the dish: ${Math.round(per100.kcal)} kcal &nbsp;\u00B7&nbsp; ${Math.round(per100.p)}g protein &nbsp;\u00B7&nbsp; ${Math.round(per100.c)}g carbs &nbsp;\u00B7&nbsp; ${Math.round(per100.f)}g fat</p>
+      ${hasSide ? `<p class="rb-combined-line">Meal total incl. side: ${Math.round(combined.totalG)}g &nbsp;\u00B7&nbsp; ${Math.round(combined.kcal)} kcal &nbsp;\u00B7&nbsp; ${Math.round(combined.p)}g protein &nbsp;\u00B7&nbsp; ${Math.round(combined.c)}g carbs &nbsp;\u00B7&nbsp; ${Math.round(combined.f)}g fat</p>` : `<div style="margin-bottom:18px;"></div>`}
+
+      <div class="rb-servings-row">
+        <span class="rb-servings-label">Servings</span>
+        <div class="rb-stepper">
+          <button data-dec="1" ${st.servings <= 1 ? "disabled" : ""}>\u2212</button>
+          <span class="rb-stepper-val">${st.servings}</span>
+          <button data-inc="1" ${st.servings >= 10 ? "disabled" : ""}>+</button>
+        </div>
+      </div>
+
+      ${miniTogglePanelHtml(hasGarlic, hasTomato)}
+
+      <h3 class="rb-section-label">Ingredients</h3>
+      <p class="rb-ing-progress">${doneCount} of ${total} ready</p>
+      ${mainIngHtml}
+      ${removedHtml}
+      ${customHtml}
+      <div class="rb-add-row">
+        <input type="text" class="rb-add-input" placeholder="Add an ingredient…">
+        <button class="rb-add-btn" data-add-ing="1" type="button">Add</button>
+      </div>
+      ${doneCount > 0 ? `<button class="rb-reset" data-reset="1">Uncheck all</button>` : ""}
+
+      ${renderSideSection(r, st)}
+
+      <h3 class="rb-section-label" style="margin-top:22px;">Method</h3>
+      ${stepsHtml}
+    `;
+  }
+
+  function render() {
+    if (currentId) renderRecipe(currentId);
+    else renderHome();
+  }
+
+  function tryAddIngredient() {
+    if (!currentId) return;
+    const input = body.querySelector(".rb-add-input");
+    if (!input) return;
+    const text = input.value.trim();
+    if (!text) return;
+    const st = getRecipeState(currentId);
+    st.customSeq++;
+    st.custom.push({ id: st.customSeq, text });
+    saveState();
+    render();
+  }
+
+  function commitSide(type, grams) {
+    if (!currentId || !grams || grams <= 0) return;
+    const st = getRecipeState(currentId);
+    st.side = { type, grams };
+    delete sidePicking[currentId];
+    saveState();
+    render();
+  }
+
+  root.addEventListener("click", (e) => {
+    const openBtn = e.target.closest("[data-open]");
+    if (openBtn) { currentId = openBtn.getAttribute("data-open"); render(); return; }
+
+    const backBtn = e.target.closest("[data-back]");
+    if (backBtn) { currentId = null; render(); return; }
+
+    const incBtn = e.target.closest("[data-inc]");
+    if (incBtn && currentId) {
+      const st = getRecipeState(currentId);
+      if (st.servings < 10) st.servings++;
+      saveState(); render(); return;
+    }
+    const decBtn = e.target.closest("[data-dec]");
+    if (decBtn && currentId) {
+      const st = getRecipeState(currentId);
+      if (st.servings > 1) st.servings--;
+      saveState(); render(); return;
+    }
+    const resetBtn = e.target.closest("[data-reset]");
+    if (resetBtn && currentId) {
+      const st = getRecipeState(currentId);
+      st.checked = {};
+      saveState(); render(); return;
+    }
+    const addBtn = e.target.closest("[data-add-ing]");
+    if (addBtn) { tryAddIngredient(); return; }
+
+    const removeBtn = e.target.closest("[data-remove-custom]");
+    if (removeBtn && currentId) {
+      const cid = Number(removeBtn.getAttribute("data-remove-custom"));
+      const st = getRecipeState(currentId);
+      st.custom = st.custom.filter(c => c.id !== cid);
+      delete st.checked["custom_" + cid];
+      saveState(); render(); return;
+    }
+
+    const editIngBtn = e.target.closest("[data-edit-ing]");
+    if (editIngBtn && currentId) {
+      editingIng[currentId] = Number(editIngBtn.getAttribute("data-edit-ing"));
+      render(); return;
+    }
+    const editSaveBtn = e.target.closest("[data-edit-save]");
+    if (editSaveBtn && currentId) {
+      const idx = Number(editSaveBtn.getAttribute("data-edit-save"));
+      const input = body.querySelector(".rb-edit-amount-input");
+      const val = input ? parseFloat(input.value) : NaN;
+      if (!isNaN(val) && val >= 0) {
+        const st = getRecipeState(currentId);
+        st.overrides[idx] = { amount: val };
+        delete editingIng[currentId];
+        saveState(); render();
+      }
+      return;
+    }
+    const editRemoveBtn = e.target.closest("[data-edit-remove]");
+    if (editRemoveBtn && currentId) {
+      const idx = Number(editRemoveBtn.getAttribute("data-edit-remove"));
+      const st = getRecipeState(currentId);
+      st.overrides[idx] = { removed: true };
+      delete editingIng[currentId];
+      saveState(); render(); return;
+    }
+    const editCancelBtn = e.target.closest("[data-edit-cancel]");
+    if (editCancelBtn && currentId) {
+      delete editingIng[currentId];
+      render(); return;
+    }
+    const restoreBtn = e.target.closest("[data-restore-ing]");
+    if (restoreBtn && currentId) {
+      const idx = Number(restoreBtn.getAttribute("data-restore-ing"));
+      const st = getRecipeState(currentId);
+      delete st.overrides[idx];
+      saveState(); render(); return;
+    }
+
+    const chipBtn = e.target.closest("[data-side-chip]");
+    if (chipBtn && currentId) {
+      sidePicking[currentId] = chipBtn.getAttribute("data-side-chip");
+      render(); return;
+    }
+    const portionBtn = e.target.closest("[data-side-portion]");
+    if (portionBtn && currentId) {
+      const type = sidePicking[currentId];
+      const cfg = sideTypeByKey[type];
+      if (cfg) commitSide(type, cfg.portion);
+      return;
+    }
+    const manualAddBtn = e.target.closest("[data-side-manual-add]");
+    if (manualAddBtn && currentId) {
+      const input = body.querySelector(".rb-side-manual-input");
+      const val = input ? parseFloat(input.value) : NaN;
+      const type = sidePicking[currentId];
+      if (type && !isNaN(val) && val > 0) commitSide(type, val);
+      return;
+    }
+    const cancelBtn = e.target.closest("[data-side-cancel]");
+    if (cancelBtn && currentId) { delete sidePicking[currentId]; render(); return; }
+
+    const sideRemoveBtn = e.target.closest("[data-side-remove]");
+    if (sideRemoveBtn && currentId) {
+      const st = getRecipeState(currentId);
+      st.side = null;
+      delete st.checked["side"];
+      saveState(); render(); return;
+    }
+  });
+
+  root.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && e.target.classList.contains("rb-add-input")) {
+      e.preventDefault(); tryAddIngredient();
+    }
+    if (e.key === "Enter" && e.target.classList.contains("rb-side-manual-input")) {
+      e.preventDefault();
+      const btn = body.querySelector("[data-side-manual-add]");
+      if (btn) btn.click();
+    }
+    if (e.key === "Enter" && e.target.classList.contains("rb-edit-amount-input")) {
+      e.preventDefault();
+      const btn = body.querySelector("[data-edit-save]");
+      if (btn) btn.click();
+    }
+  });
+
+  root.addEventListener("change", (e) => {
+    if (e.target.classList.contains("rb-ing-check") && currentId) {
+      const key = e.target.getAttribute("data-key");
+      const st = getRecipeState(currentId);
+      st.checked[key] = e.target.checked;
+      saveState(); render(); return;
+    }
+    if (e.target.classList.contains("rb-switch-input")) {
+      const key = e.target.getAttribute("data-pref");
+      const prefs = getPrefs();
+      prefs[key] = e.target.checked;
+      saveState(); render(); return;
+    }
+  });
+
+  loadState().then(render);
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
