@@ -104,6 +104,32 @@
     background: var(--mustard); color: #211c14; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
   .rb-log-hint { font-size: 12px; color: var(--muted); margin: 8px 0 2px; }
   .rb-weigh-line { font-size: 11.5px; color: var(--muted); text-align: center; margin: 2px 0 4px; }
+  .rb-macro-btn { flex: none; background: none; border: none; font-size: 15px; line-height: 1; padding: 4px 6px;
+    cursor: pointer; opacity: .45; filter: grayscale(1); }
+  .rb-macro-btn.is-set { opacity: 1; filter: none; }
+  .rb-photo-btn { display: block; text-align: center; margin: 10px 0; padding: 11px; border-radius: 10px;
+    border: 1px dashed rgba(201,160,74,.5); color: var(--mustard); font-size: 14px; cursor: pointer; }
+  .rb-photo-input { display: none; }
+  .rb-label-shot { display: block; width: 100%; max-height: 240px; object-fit: contain;
+    border-radius: 10px; margin: 8px 0; background: #000; }
+  .rb-macro-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 10px 0 2px; }
+  .rb-macro-grid label { display: flex; flex-direction: column; gap: 3px; font-size: 11px; color: var(--muted); }
+  .rb-macro-grid input { padding: 9px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--text); font-family: inherit; font-size: 14px; width: 100%; }
+  .rb-calc-btn { display: block; width: 100%; margin: 16px 0 4px; padding: 12px; border: none; border-radius: 12px;
+    background: var(--surface); color: var(--mustard); border: 1px solid rgba(201,160,74,.45);
+    font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .rb-breakdown { margin: 12px 0 4px; padding: 12px; background: var(--surface); border-radius: 12px; }
+  .rb-bd-head, .rb-bd-row { display: grid; grid-template-columns: 1fr 44px 50px 46px; gap: 6px; align-items: baseline; }
+  .rb-bd-head { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
+    padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  .rb-bd-head span:not(:first-child), .rb-bd-row span:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+  .rb-bd-row { font-size: 13px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  .rb-bd-row.is-unknown { opacity: .5; }
+  .rb-bd-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rb-bd-tag { font-style: normal; font-size: 9.5px; letter-spacing: .05em; text-transform: uppercase;
+    color: var(--mustard); border: 1px solid rgba(201,160,74,.45); border-radius: 4px; padding: 1px 4px; margin-left: 4px; }
+  .rb-bd-total { font-weight: 600; border-bottom: none; padding-top: 8px; }
   .rb-linkbtn { background: none; border: none; padding: 0; font-family: inherit; font-size: inherit;
     color: var(--mustard); text-decoration: underline; cursor: pointer; }
   .rb-intake-card { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; margin-bottom: 18px;
@@ -223,12 +249,14 @@
     egg: 50, bread: 30, brinjal: 450, can: 120, tomatoPureeTbsp: 16,
     tspSpice: 3, tbspSpice: 9, tspOil: 4.5, tbspOil: 13.5, ml: 1
   };
-  const TOMATO_PUREE_TBSP_PER_UNIT = 1.5; // ~1.5 tbsp concentrated puree per whole tomato it replaces
+  // Blaze's puree is a strained-tomato carton (27 kcal/100g), not a concentrate, so it
+  // swaps in at roughly its own weight rather than the 1.5 tbsp a paste would need.
+  const TOMATO_PUREE_TBSP_PER_UNIT = GF.tomato / GF.tomatoPureeTbsp;
 
   const NUT = {
     egg:{kcal:155,p:12.6,c:1.1,f:10.6}, bread:{kcal:265,p:9,c:49,f:3.2}, milk:{kcal:61,p:3.2,c:4.8,f:3.3},
     onion:{kcal:40,p:1.1,c:9.3,f:0.1}, tomato:{kcal:27,p:1.5,c:3.8,f:0.5}, garlic:{kcal:149,p:6.4,c:33,f:0.5},
-    tomato_puree:{kcal:82,p:4.3,c:18.9,f:0.5},
+    tomato_puree:{kcal:27,p:1.5,c:3.8,f:0.5},
     cumin:{kcal:375,p:17.8,c:44.2,f:22.3}, turmeric:{kcal:312,p:9.7,c:67.1,f:3.3}, chili:{kcal:282,p:13.5,c:49.7,f:14.3},
     coriander_powder:{kcal:298,p:12.4,c:55,f:17.8}, garam_masala:{kcal:300,p:12,c:50,f:15}, salt:{kcal:0,p:0,c:0,f:0},
     oil:{kcal:884,p:0,c:0,f:100}, chicken:{kcal:120,p:22.5,c:0,f:2.6}, rice_cooked:{kcal:130,p:2.7,c:28,f:0.3},
@@ -324,37 +352,66 @@
   }
 
   function emptyNut() { return { totalG: 0, kcal: 0, p: 0, c: 0, f: 0 }; }
+  // Per-100g values for an ingredient: a measured override from the actual packet
+  // beats the built-in reference table.
+  function nutFor(ing) {
+    if (ing._macro) return ing._macro;
+    const key = getNutKey(ing);
+    return key && NUT[key] ? NUT[key] : null;
+  }
   function addToNut(acc, ing, amt) {
     const g = trueGrams(ing, amt);
     acc.totalG += g;
-    const key = getNutKey(ing);
-    if (key && NUT[key]) {
-      const n = NUT[key];
+    const n = nutFor(ing);
+    if (n) {
       acc.kcal += g * n.kcal / 100; acc.p += g * n.p / 100; acc.c += g * n.c / 100; acc.f += g * n.f / 100;
     }
   }
   // applies per-recipe user overrides (removed ingredients, edited quantities) to the
   // recipe's base ingredient list, carrying the original array index along as _idx
-  function effectiveIngredients(r, overrides) {
+  function effectiveIngredients(r, overrides, macros) {
     const ov = overrides || {};
+    const mc = macros || {};
     const out = [];
     r.ingredients.forEach((ing, idx) => {
       const o = ov[idx];
       if (o && o.removed) return;
-      if (o && o.amount !== undefined) out.push(Object.assign({}, ing, { a: o.amount, _idx: idx }));
-      else out.push(Object.assign({}, ing, { _idx: idx }));
+      const extra = { _idx: idx };
+      if (mc[idx]) extra._macro = mc[idx];
+      if (o && o.amount !== undefined) extra.a = o.amount;
+      out.push(Object.assign({}, ing, extra));
     });
     return out;
   }
   // main-dish nutrition only -- single-pot carbs (fried rice, pasta bolognese) are already
   // ordinary ingredients here and count normally; there is no separate "side" ingredient anymore
-  function computeNutrition(r, scale, overrides) {
+  function computeNutrition(r, scale, overrides, macros) {
     const main = emptyNut();
-    effectiveIngredients(r, overrides).forEach(ing => {
+    effectiveIngredients(r, overrides, macros).forEach(ing => {
       if (ing.a === null) return;
       addToNut(main, ing, ing.a * scale);
     });
     return main;
+  }
+  // per-ingredient contribution, so the totals can be shown as a breakdown
+  function nutritionBreakdown(r, scale, overrides, macros) {
+    return effectiveIngredients(r, overrides, macros).map(ing => {
+      if (ing.a === null) return null;
+      const amt = ing.a * scale;
+      const g = trueGrams(ing, amt);
+      const n = nutFor(ing);
+      return {
+        idx: ing._idx,
+        name: baseLabel(ing),
+        g: g,
+        measured: !!ing._macro,
+        known: !!n,
+        kcal: n ? g * n.kcal / 100 : 0,
+        p: n ? g * n.p / 100 : 0,
+        c: n ? g * n.c / 100 : 0,
+        f: n ? g * n.f / 100 : 0
+      };
+    }).filter(Boolean).sort((a, b) => b.kcal - a.kcal);
   }
   function computeSideNut(sideSel) {
     const out = emptyNut();
@@ -758,6 +815,9 @@
   let logPicking = null;  // recipeId whose "how many grams did I eat" panel is open
   let goalEditing = false;
   let weighEditing = null; // recipeId whose cooked-weight panel is open
+  let macroEditing = null;  // {id, idx, photo} — ingredient whose packet-macros panel is open
+  let breakdownOpen = null; // recipeId whose macro breakdown is expanded
+  let calcFlash = null;     // recipeId briefly confirming a recalculation
   const sidePicking = {}; // transient UI state: recipeId -> side type key currently being configured
   const editingIng = {}; // transient UI state: recipeId -> ingredient idx currently being edited
   const root = document.getElementById("rb-root");
@@ -780,6 +840,81 @@
   function saveState() {
     try { localStorage.setItem("blaze-cookbook-state", JSON.stringify(state)); } catch (e) {}
   }
+  // ---- label photos -----------------------------------------------------
+  // Photos live in IndexedDB, not localStorage: a handful of label shots would
+  // blow the ~5MB string quota that holds all the rest of the app state.
+  const PHOTO_DB = "blaze-cookbook-photos";
+  let photoDbPromise = null;
+  function photoDb() {
+    if (photoDbPromise) return photoDbPromise;
+    photoDbPromise = new Promise((resolve, reject) => {
+      let req;
+      try { req = indexedDB.open(PHOTO_DB, 1); } catch (e) { reject(e); return; }
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains("photos")) req.result.createObjectStore("photos");
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    }).catch(() => null);
+    return photoDbPromise;
+  }
+  async function photoPut(key, dataUrl) {
+    const db = await photoDb();
+    if (!db) return false;
+    return new Promise(res => {
+      try {
+        const tx = db.transaction("photos", "readwrite");
+        tx.objectStore("photos").put(dataUrl, key);
+        tx.oncomplete = () => res(true);
+        tx.onerror = () => res(false);
+      } catch (e) { res(false); }
+    });
+  }
+  async function photoGet(key) {
+    const db = await photoDb();
+    if (!db) return null;
+    return new Promise(res => {
+      try {
+        const tx = db.transaction("photos", "readonly");
+        const rq = tx.objectStore("photos").get(key);
+        rq.onsuccess = () => res(rq.result || null);
+        rq.onerror = () => res(null);
+      } catch (e) { res(null); }
+    });
+  }
+  async function photoDel(key) {
+    const db = await photoDb();
+    if (!db) return;
+    try {
+      const tx = db.transaction("photos", "readwrite");
+      tx.objectStore("photos").delete(key);
+    } catch (e) {}
+  }
+  // shrink before storing — a phone camera shot is several MB and a label only
+  // needs to stay readable
+  function shrinkImage(file, maxDim, quality) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onerror = () => reject(new Error("read failed"));
+      fr.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error("decode failed"));
+        img.onload = () => {
+          let { width: w, height: h } = img;
+          const scale = Math.min(1, maxDim / Math.max(w, h));
+          w = Math.round(w * scale); h = Math.round(h * scale);
+          const cv = document.createElement("canvas");
+          cv.width = w; cv.height = h;
+          cv.getContext("2d").drawImage(img, 0, 0, w, h);
+          resolve(cv.toDataURL("image/jpeg", quality));
+        };
+        img.src = fr.result;
+      };
+      fr.readAsDataURL(file);
+    });
+  }
+  function photoKey(recipeId, idx) { return recipeId + ":" + idx; }
+
   // ---- daily intake log -------------------------------------------------
   // state._intake = { "YYYY-MM-DD": [ {id, name, g, kcal, p, c, f} ] }
   // state._goals  = { kcal, p }   (0 / missing = no goal set)
@@ -817,7 +952,7 @@
   // per-100g profile of a recipe as it is currently configured (edits included)
   function recipePer100(r) {
     const st = getRecipeState(r.id);
-    const n = computeNutrition(r, 1, st.overrides);
+    const n = computeNutrition(r, 1, st.overrides, st.macros);
     const w = effectiveWeight(r, 1, n.totalG);
     if (!w) return { kcal: 0, p: 0, c: 0, f: 0 };
     return {
@@ -838,11 +973,12 @@
   }
 
   function getRecipeState(id) {
-    if (!state[id]) state[id] = { servings: 1, checked: {}, custom: [], customSeq: 0, side: null, overrides: {} };
+    if (!state[id]) state[id] = { servings: 1, checked: {}, custom: [], customSeq: 0, side: null, overrides: {}, macros: {} };
     if (!state[id].custom) state[id].custom = [];
     if (state[id].customSeq === undefined) state[id].customSeq = 0;
     if (state[id].side === undefined) state[id].side = null;
     if (!state[id].overrides) state[id].overrides = {};
+    if (!state[id].macros) state[id].macros = {};
     return state[id];
   }
 
@@ -1048,7 +1184,7 @@
       html += `<h2 class="rb-cat-heading">${cat}</h2>`;
       items.forEach(r => {
         const st = getRecipeState(r.id);
-        const nut = computeNutrition(r, 1, st.overrides);
+        const nut = computeNutrition(r, 1, st.overrides, st.macros);
         const per = recipePer100(r);
         const total = totalRowCount(r, prefs, st);
         const doneCount = Object.values(st.checked).filter(Boolean).length;
@@ -1238,7 +1374,7 @@
     headerTitle.textContent = r.title;
     headerSub.textContent = r.cat;
 
-    const main = computeNutrition(r, scale, st.overrides);
+    const main = computeNutrition(r, scale, st.overrides, st.macros);
     const sideNut = computeSideNut(st.side);
     const priceStr = r.price !== null
       ? "\u20AC" + (r.price * scale).toFixed(2) + (r.tracked ? " (tracked)" : "")
@@ -1279,14 +1415,44 @@
             <button class="rb-side-cancel" data-edit-cancel="1" type="button">Cancel</button>
           </div>`;
       }
+      if (row.editIdx !== undefined && macroEditing && macroEditing.id === id && macroEditing.idx === row.editIdx) {
+        const m = st.macros[row.editIdx] || {};
+        const shot = macroEditing.photo || null;
+        const key = getNutKey(r.ingredients[row.editIdx]);
+        const ref = key && NUT[key] ? NUT[key] : null;
+        return `
+          <div class="rb-side-input-panel" style="margin:6px 0;">
+            <p class="rb-side-picker-label" style="margin:0 0 8px;">${r.ingredients[row.editIdx].n}</p>
+            <p class="rb-log-hint" style="margin-top:0;">Snap the nutrition panel, then type its per-100 g figures below. The photo is kept with the recipe so you can check it later.</p>
+            ${shot ? `<img class="rb-label-shot" src="${shot}" alt="label">` : ""}
+            <label class="rb-photo-btn">
+              ${shot ? "Retake photo" : "\uD83D\uDCF7 &nbsp;Take photo of label"}
+              <input type="file" accept="image/*" capture="environment" class="rb-photo-input" data-photo-for="${row.editIdx}">
+            </label>
+            <div class="rb-macro-grid">
+              <label><span>kcal</span><input type="number" min="0" step="any" class="rb-m-kcal" value="${m.kcal !== undefined ? m.kcal : ""}" placeholder="${ref ? ref.kcal : ""}"></label>
+              <label><span>protein</span><input type="number" min="0" step="any" class="rb-m-p" value="${m.p !== undefined ? m.p : ""}" placeholder="${ref ? ref.p : ""}"></label>
+              <label><span>carbs</span><input type="number" min="0" step="any" class="rb-m-c" value="${m.c !== undefined ? m.c : ""}" placeholder="${ref ? ref.c : ""}"></label>
+              <label><span>fat</span><input type="number" min="0" step="any" class="rb-m-f" value="${m.f !== undefined ? m.f : ""}" placeholder="${ref ? ref.f : ""}"></label>
+            </div>
+            <p class="rb-log-hint">${ref ? `Greyed numbers are the general values in use now.` : `No general value for this one \u2014 it currently counts as zero.`}</p>
+            <button class="rb-side-portion-btn" data-macro-save="${row.editIdx}" type="button">Save these values</button>
+            ${st.macros[row.editIdx] ? `<button class="rb-side-cancel" data-macro-clear="${row.editIdx}" type="button">Back to general value</button>` : ""}
+            <button class="rb-side-cancel" data-macro-cancel="1" type="button">Cancel</button>
+          </div>`;
+      }
       const checked = !!st.checked[row.key];
+      const measured = row.editIdx !== undefined && st.macros[row.editIdx];
       const editBtn = row.editIdx !== undefined
         ? `<button class="rb-custom-remove" data-edit-ing="${row.editIdx}" type="button" aria-label="Edit or remove">\u270E</button>` : "";
+      const macroBtn = row.editIdx !== undefined
+        ? `<button class="rb-macro-btn ${measured ? "is-set" : ""}" data-macro-ing="${row.editIdx}" type="button" aria-label="Macros from the packet">${measured ? "\u2713\u2009\uD83C\uDFF7" : "\uD83C\uDFF7"}</button>` : "";
       return `
         <label class="rb-ing-row">
           <input type="checkbox" class="rb-ing-check" data-key="${row.key}" ${checked ? "checked" : ""}>
           <span class="rb-box"></span>
           <span class="rb-ing-text">${row.html}</span>
+          ${macroBtn}
           ${editBtn}
         </label>`;
     }
@@ -1315,7 +1481,11 @@
 
     const total = totalRowCount(r, prefs, st);
     const doneCount = Object.values(st.checked).filter(Boolean).length;
-    const hasEdits = Object.keys(st.overrides).length > 0 || st.custom.length > 0;
+    const hasEdits = Object.keys(st.overrides).length > 0 || st.custom.length > 0 || Object.keys(st.macros).length > 0;
+    const measuredCount = Object.keys(st.macros).length;
+    const countableIng = r.ingredients.filter(i => i.a !== null).length;
+    const showBreakdown = breakdownOpen === r.id;
+    const breakdown = showBreakdown ? nutritionBreakdown(r, scale, st.overrides, st.macros) : [];
 
     const stepsHtml = `<ol class="rb-steps">${r.steps.map((s, i) => `
         <li class="rb-step"><span class="rb-step-num">${i + 1}</span><span class="rb-step-text">${s}</span></li>`).join("")}</ol>`;
@@ -1387,7 +1557,32 @@
         <input type="text" class="rb-add-input" placeholder="Add an ingredient…">
         <button class="rb-add-btn" data-add-ing="1" type="button">Add</button>
       </div>
+      <button class="rb-calc-btn" data-calc="1" type="button">${calcFlash === r.id ? "✓ &nbsp;Recalculated" : "Calculate macros"}</button>
+      <p class="rb-weigh-line">${measuredCount
+        ? `${measuredCount} of ${countableIng} ingredients using your own packet values; the rest use general ones.`
+        : `All ingredients using general values. Tap 🏷 on any one to enter what the packet says.`}</p>
+
+      ${showBreakdown ? `
+        <div class="rb-breakdown">
+          <div class="rb-bd-head"><span>ingredient</span><span>g</span><span>kcal</span><span>prot</span></div>
+          ${breakdown.map(b => `
+            <div class="rb-bd-row${b.known ? "" : " is-unknown"}">
+              <span class="rb-bd-name">${b.name}${b.measured ? ' <i class="rb-bd-tag">yours</i>' : ""}${b.known ? "" : ' <i class="rb-bd-tag">no data</i>'}</span>
+              <span>${Math.round(b.g)}</span>
+              <span>${Math.round(b.kcal)}</span>
+              <span>${fmt1(b.p)}</span>
+            </div>`).join("")}
+          <div class="rb-bd-row rb-bd-total">
+            <span class="rb-bd-name">Total</span>
+            <span>${Math.round(main.totalG)}</span>
+            <span>${Math.round(main.kcal)}</span>
+            <span>${fmt1(main.p)}</span>
+          </div>
+          <p class="rb-log-hint">Divided by the ${st.cookedG ? "weighed cooked" : "raw"} batch weight of ${Math.round(dishG)}g, that is ${Math.round(per100.kcal)} kcal and ${fmt1(per100.p)}g protein per 100g.</p>
+        </div>` : ""}
+
       <div class="rb-reset-row">
+        <button class="rb-reset" data-breakdown="1">${showBreakdown ? "Hide" : "Show"} the maths</button>
         <button class="rb-reset" data-reset="1" ${doneCount === 0 ? "disabled" : ""}>Uncheck all</button>
         <button class="rb-reset" data-reset-ingredients="1" ${hasEdits ? "" : "disabled"}>Reset ingredients to default</button>
       </div>
@@ -1398,6 +1593,8 @@
       ${stepsHtml}
     `;
   }
+
+  function r_byId(id) { return byId[id]; }
 
   function render() {
     if (view === "intake") renderIntake();
@@ -1412,6 +1609,7 @@
     view = "recipe";
     logPicking = null;
     weighEditing = null;
+    macroEditing = null;
     history.pushState({ rb: "recipe", id }, "", "#" + id);
     render();
     body.scrollTo(0, 0);
@@ -1421,6 +1619,7 @@
     view = "intake";
     logPicking = null;
     weighEditing = null;
+    macroEditing = null;
     goalEditing = false;
     viewDate = todayKey();
     history.pushState({ rb: "intake" }, "", "#intake");
@@ -1432,6 +1631,7 @@
     view = "home";
     logPicking = null;
     weighEditing = null;
+    macroEditing = null;
     if (!fromPop) history.pushState({ rb: "home" }, "", location.pathname + location.search);
     render();
     body.scrollTo(0, 0);
@@ -1440,6 +1640,7 @@
     const st = e.state;
     logPicking = null;
     weighEditing = null;
+    macroEditing = null;
     if (st && st.rb === "recipe" && byId[st.id]) { currentId = st.id; view = "recipe"; }
     else if (st && st.rb === "intake") { currentId = null; view = "intake"; viewDate = viewDate || todayKey(); }
     else { currentId = null; view = "home"; }
@@ -1519,6 +1720,70 @@
       const all = getIntake();
       all[viewDate] = getDayLog(viewDate).filter(x => x.id !== eid);
       saveState(); render(); return;
+    }
+
+    const macroIngBtn = e.target.closest("[data-macro-ing]");
+    if (macroIngBtn && currentId) {
+      const idx = Number(macroIngBtn.getAttribute("data-macro-ing"));
+      macroEditing = { id: currentId, idx: idx, photo: null };
+      render();
+      photoGet(photoKey(currentId, idx)).then(url => {
+        if (url && macroEditing && macroEditing.id === currentId && macroEditing.idx === idx) {
+          macroEditing.photo = url; render();
+        }
+      });
+      return;
+    }
+    const macroCancelBtn = e.target.closest("[data-macro-cancel]");
+    if (macroCancelBtn) { macroEditing = null; render(); return; }
+    const macroClearBtn = e.target.closest("[data-macro-clear]");
+    if (macroClearBtn && currentId) {
+      const idx = Number(macroClearBtn.getAttribute("data-macro-clear"));
+      const st = getRecipeState(currentId);
+      delete st.macros[idx];
+      photoDel(photoKey(currentId, idx));
+      macroEditing = null;
+      saveState(); render(); return;
+    }
+    const macroSaveBtn = e.target.closest("[data-macro-save]");
+    if (macroSaveBtn && currentId) {
+      const idx = Number(macroSaveBtn.getAttribute("data-macro-save"));
+      const num = cls => {
+        const el = body.querySelector(cls);
+        const v = el ? parseFloat(el.value) : NaN;
+        return isNaN(v) || v < 0 ? null : v;
+      };
+      const kcal = num(".rb-m-kcal"), pp = num(".rb-m-p"), cc = num(".rb-m-c"), ff = num(".rb-m-f");
+      const st = getRecipeState(currentId);
+      if (kcal === null && pp === null && cc === null && ff === null) {
+        delete st.macros[idx];
+      } else {
+        const key = getNutKey(r_byId(currentId).ingredients[idx]);
+        const ref = key && NUT[key] ? NUT[key] : { kcal: 0, p: 0, c: 0, f: 0 };
+        st.macros[idx] = {
+          kcal: kcal === null ? ref.kcal : kcal,
+          p: pp === null ? ref.p : pp,
+          c: cc === null ? ref.c : cc,
+          f: ff === null ? ref.f : ff
+        };
+      }
+      if (macroEditing && macroEditing.photo) photoPut(photoKey(currentId, idx), macroEditing.photo);
+      macroEditing = null;
+      saveState(); render(); return;
+    }
+
+    const calcBtn = e.target.closest("[data-calc]");
+    if (calcBtn && currentId) {
+      calcFlash = currentId;
+      breakdownOpen = currentId;
+      render();
+      setTimeout(() => { calcFlash = null; }, 1600);
+      return;
+    }
+    const bdBtn = e.target.closest("[data-breakdown]");
+    if (bdBtn && currentId) {
+      breakdownOpen = breakdownOpen === currentId ? null : currentId;
+      render(); return;
     }
 
     const cookedEditBtn = e.target.closest("[data-cooked-edit]");
@@ -1694,6 +1959,14 @@
   });
 
   root.addEventListener("change", (e) => {
+    if (e.target.classList.contains("rb-photo-input")) {
+      const file = e.target.files && e.target.files[0];
+      if (!file || !macroEditing) return;
+      shrinkImage(file, 1100, 0.68)
+        .then(url => { if (macroEditing) { macroEditing.photo = url; render(); } })
+        .catch(() => {});
+      return;
+    }
     if (e.target.classList.contains("rb-ing-check") && currentId) {
       const key = e.target.getAttribute("data-key");
       const st = getRecipeState(currentId);
