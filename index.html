@@ -98,6 +98,36 @@
   .rb-stat-fat .rb-stat-num { color: #c9707a; }
   .rb-stat-cost .rb-stat-num { color: #6fa3a0; }
   .rb-per100 { font-size: 12px; color: var(--muted); text-align: center; margin: 8px 0 4px; }
+  .rb-stats-grid-4 { grid-template-columns: repeat(4, 1fr); }
+  .rb-stats-caption { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-align: center; margin: 0 0 8px; }
+  .rb-ate-btn { display: block; width: 100%; margin: 12px 0 4px; padding: 12px; border: none; border-radius: 12px;
+    background: var(--mustard); color: #211c14; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .rb-log-hint { font-size: 12px; color: var(--muted); margin: 8px 0 2px; }
+  .rb-weigh-line { font-size: 11.5px; color: var(--muted); text-align: center; margin: 2px 0 4px; }
+  .rb-linkbtn { background: none; border: none; padding: 0; font-family: inherit; font-size: inherit;
+    color: var(--mustard); text-decoration: underline; cursor: pointer; }
+  .rb-intake-card { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; margin-bottom: 18px;
+    padding: 14px; border: 1px solid rgba(201,160,74,.35); border-radius: 12px; background: var(--surface);
+    color: inherit; font-family: inherit; cursor: pointer; }
+  .rb-intake-main { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  .rb-intake-title { font-size: 15px; font-weight: 600; color: var(--mustard); }
+  .rb-intake-meta { font-size: 12.5px; color: var(--muted); }
+  .rb-day-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+  .rb-day-nav button { width: 38px; height: 34px; border: none; border-radius: 9px; background: var(--surface);
+    color: var(--text); font-size: 18px; cursor: pointer; }
+  .rb-day-nav button:disabled { opacity: .3; cursor: default; }
+  .rb-day-label { font-size: 15px; font-weight: 600; }
+  .rb-goal { margin: 12px 0; }
+  .rb-goal-head { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); margin-bottom: 5px; }
+  .rb-goal-track { height: 7px; border-radius: 4px; background: var(--surface); overflow: hidden; }
+  .rb-goal-fill { height: 100%; background: var(--mustard); border-radius: 4px; }
+  .rb-log-row { display: flex; align-items: center; gap: 10px; padding: 10px 2px; border-bottom: 1px solid var(--line); }
+  .rb-log-main { flex: 1; }
+  .rb-log-name { font-size: 14.5px; margin-bottom: 2px; }
+  .rb-log-meta { font-size: 12px; color: var(--muted); }
+  .rb-empty { font-size: 13.5px; color: var(--muted); padding: 10px 0; }
+  .rb-log-recipe { width: 100%; padding: 10px; border-radius: 9px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--text); font-family: inherit; font-size: 14px; }
   .rb-side-line { font-size: 12px; color: var(--muted); text-align: center; margin: 0 0 4px; line-height: 1.5; }
   .rb-combined-line { font-size: 12.5px; color: var(--mustard); text-align: center; margin: 4px 0 18px; line-height: 1.5; font-weight: 500; }
 
@@ -197,7 +227,7 @@
 
   const NUT = {
     egg:{kcal:155,p:12.6,c:1.1,f:10.6}, bread:{kcal:265,p:9,c:49,f:3.2}, milk:{kcal:61,p:3.2,c:4.8,f:3.3},
-    onion:{kcal:40,p:1.1,c:9.3,f:0.1}, tomato:{kcal:18,p:0.9,c:3.9,f:0.2}, garlic:{kcal:149,p:6.4,c:33,f:0.5},
+    onion:{kcal:40,p:1.1,c:9.3,f:0.1}, tomato:{kcal:27,p:1.5,c:3.8,f:0.5}, garlic:{kcal:149,p:6.4,c:33,f:0.5},
     tomato_puree:{kcal:82,p:4.3,c:18.9,f:0.5},
     cumin:{kcal:375,p:17.8,c:44.2,f:22.3}, turmeric:{kcal:312,p:9.7,c:67.1,f:3.3}, chili:{kcal:282,p:13.5,c:49.7,f:14.3},
     coriander_powder:{kcal:298,p:12.4,c:55,f:17.8}, garam_masala:{kcal:300,p:12,c:50,f:15}, salt:{kcal:0,p:0,c:0,f:0},
@@ -207,6 +237,7 @@
     cabbage:{kcal:25,p:1.3,c:5.8,f:0.1}, carrot:{kcal:41,p:0.9,c:9.6,f:0.2}, potato:{kcal:77,p:2,c:17,f:0.1},
     brinjal:{kcal:25,p:1,c:6,f:0.2}, mackerel:{kcal:205,p:19,c:0,f:13.9}, pasta_dry:{kcal:371,p:13,c:75,f:1.5},
     beans_cooked:{kcal:143,p:9,c:26.2,f:0.65}, beans_dry:{kcal:347,p:21,c:63,f:1.2}, water:{kcal:0,p:0,c:0,f:0},
+    kidney_beans_canned:{kcal:117,p:8.4,c:15,f:1},
     couscous_dry:{kcal:376,p:12.8,c:77.4,f:0.6}, semolina_dry:{kcal:360,p:12.7,c:72.8,f:1.1}, tortilla:{kcal:310,p:8,c:50,f:7},
     potato_baked:{kcal:93,p:2.1,c:21.1,f:0.1}, beef:{kcal:250,p:26,c:0,f:15},
     black_pepper:{kcal:251,p:10.4,c:63.9,f:3.3}, rice_dry:{kcal:350,p:7.5,c:78,f:0.5},
@@ -249,6 +280,7 @@
     if (n.includes("black pepper") || n.includes("crushed pepper")) return "black_pepper";
     if (n.includes("cooked dal")) return "dal_cooked";
     if (n.includes("dry red lentils")) return "lentils_dry";
+    if (n.includes("kidney bean")) return "kidney_beans_canned";
     if (n.includes("wachtelbohnen") || n.includes("pinto bean")) return (n.includes("dry") || n.includes("dried")) ? "beans_dry" : "beans_cooked";
     if (n.includes("cooked rice")) return "rice_cooked";
     if (n.includes("rice")) return "rice_dry";
@@ -501,10 +533,10 @@
         "Stir in the garam masala and salt to finish."
       ] },
 
-    { id:"r18", cat:"Protein Mains", title:"Chicken & Pinto Bean Masala", price:0.55, sidesEligible:true,
+    { id:"r18", cat:"Protein Mains", title:"Chicken & Kidney Bean Masala", price:0.75, sidesEligible:true,
       ingredients:[
-        {a:150,u:"g",n:"chicken, diced"},
-        {a:40,u:"g",n:"dry pinto beans (Wachtelbohnen), soaked overnight"},
+        {a:150,u:"g",n:"chicken breast, diced"},
+        {a:100,u:"g",n:"canned red kidney beans, drained"},
         {a:1,u:"",n:"onion",type:"onion"},
         {a:1,u:"",n:"tomato",type:"tomato"},
         {a:3,u:"",n:"garlic cloves",type:"garlic"},
@@ -514,12 +546,11 @@
         {a:null,u:"",n:"salt"},{a:200,u:"ml",n:"water"}
       ],
       steps:[
-        "The night before (or at least 6–8 hours ahead), soak the dry pinto beans in plenty of water.",
-        "Drain the soaked beans. Dice the chicken, onion, and tomato; mince the garlic.",
+        "Drain and rinse the canned kidney beans. Dice the chicken, onion, and tomato; mince the garlic.",
         "Heat the oil in a pot. Add the cumin seeds, then the onion, and cook until golden.",
         "Add the garlic, tomato, turmeric, coriander powder, and chili powder. Cook until the tomato breaks down and the oil separates.",
-        "Add the drained beans and the water. Cover and simmer 35–40 minutes until the beans are nearly tender — dry beans need this long even after soaking.",
-        "Add the diced chicken, stir in, and simmer uncovered 10–12 minutes more until the chicken is cooked through and the beans are fully tender, splashing in a little more water if it dries out.",
+        "Add the diced chicken and the water. Simmer 10–12 minutes until the chicken is cooked through.",
+        "Add the drained kidney beans and simmer 5 more minutes — they are already cooked, so they only need to heat through and take on the masala. Splash in a little more water if it dries out.",
         "Stir in the garam masala and salt to finish.",
         "Serve as is, or add rice, bread, or another side below."
       ] },
@@ -722,6 +753,11 @@
 
   let state = {};
   let currentId = null;
+  let view = "home";      // "home" | "recipe" | "intake"
+  let viewDate = "";      // YYYY-MM-DD currently shown in the intake view
+  let logPicking = null;  // recipeId whose "how many grams did I eat" panel is open
+  let goalEditing = false;
+  let weighEditing = null; // recipeId whose cooked-weight panel is open
   const sidePicking = {}; // transient UI state: recipeId -> side type key currently being configured
   const editingIng = {}; // transient UI state: recipeId -> ingredient idx currently being edited
   const root = document.getElementById("rb-root");
@@ -744,6 +780,63 @@
   function saveState() {
     try { localStorage.setItem("blaze-cookbook-state", JSON.stringify(state)); } catch (e) {}
   }
+  // ---- daily intake log -------------------------------------------------
+  // state._intake = { "YYYY-MM-DD": [ {id, name, g, kcal, p, c, f} ] }
+  // state._goals  = { kcal, p }   (0 / missing = no goal set)
+  function todayKey(d) {
+    const dt = d || new Date();
+    return dt.getFullYear() + "-" + String(dt.getMonth() + 1).padStart(2, "0") + "-" + String(dt.getDate()).padStart(2, "0");
+  }
+  function getIntake() {
+    if (!state._intake) state._intake = {};
+    return state._intake;
+  }
+  function getDayLog(key) {
+    const all = getIntake();
+    if (!all[key]) all[key] = [];
+    return all[key];
+  }
+  function getGoals() {
+    if (!state._goals) state._goals = { kcal: 0, p: 0 };
+    return state._goals;
+  }
+  function dayTotals(key) {
+    const t = { kcal: 0, p: 0, c: 0, f: 0, g: 0 };
+    getDayLog(key).forEach(e => {
+      t.kcal += e.kcal; t.p += e.p; t.c += e.c; t.f += e.f; t.g += e.g;
+    });
+    return t;
+  }
+  // Weight the per-100g maths should divide by. Raw ingredient weight counts
+  // water that mostly boils off, so a weighed cooked batch is far more accurate
+  // — if one has been recorded, it wins.
+  function effectiveWeight(r, scale, rawTotalG) {
+    const st = getRecipeState(r.id);
+    return st.cookedG ? st.cookedG * scale : rawTotalG;
+  }
+  // per-100g profile of a recipe as it is currently configured (edits included)
+  function recipePer100(r) {
+    const st = getRecipeState(r.id);
+    const n = computeNutrition(r, 1, st.overrides);
+    const w = effectiveWeight(r, 1, n.totalG);
+    if (!w) return { kcal: 0, p: 0, c: 0, f: 0 };
+    return {
+      kcal: n.kcal / w * 100, p: n.p / w * 100,
+      c: n.c / w * 100, f: n.f / w * 100
+    };
+  }
+  function logIntake(recipeId, grams) {
+    const r = byId[recipeId];
+    if (!r || !grams || grams <= 0) return;
+    const per = recipePer100(r);
+    const mult = grams / 100;
+    getDayLog(viewDate).push({
+      id: Date.now(), name: r.title, g: grams,
+      kcal: per.kcal * mult, p: per.p * mult, c: per.c * mult, f: per.f * mult
+    });
+    saveState();
+  }
+
   function getRecipeState(id) {
     if (!state[id]) state[id] = { servings: 1, checked: {}, custom: [], customSeq: 0, side: null, overrides: {} };
     if (!state[id].custom) state[id].custom = [];
@@ -766,6 +859,10 @@
     FRACS.forEach(([v, sym]) => { const d = Math.abs(frac - v); if (d < bestDiff) { bestDiff = d; best = sym; } });
     if (bestDiff < 0.045) return whole === 0 ? best : whole + best;
     return String(Math.round(n * 100) / 100);
+  }
+  function fmt1(n) {
+    const r = Math.round(n * 10) / 10;
+    return r % 1 === 0 ? String(r) : r.toFixed(1);
   }
   function formatWeight(g) {
     let r;
@@ -930,7 +1027,21 @@
     headerTitle.textContent = "Blaze's Cook Book";
     headerSub.textContent = recipes.length + " recipes from the batch-cooking system — tap one to cook.";
     const prefs = getPrefs();
-    let html = togglePanelHtml(false);
+    const tKey = todayKey();
+    const tot = dayTotals(tKey);
+    const goals = getGoals();
+    const eatenLine = getDayLog(tKey).length
+      ? `${Math.round(tot.kcal)} kcal &nbsp;·&nbsp; ${fmt1(tot.p)}g protein so far${goals.kcal ? ` &nbsp;·&nbsp; ${Math.round(tot.kcal / goals.kcal * 100)}% of target` : ""}`
+      : "Nothing logged yet today";
+    let html = `
+      <button class="rb-intake-card" data-intake="1" type="button">
+        <span class="rb-intake-main">
+          <span class="rb-intake-title">Today's intake</span>
+          <span class="rb-intake-meta">${eatenLine}</span>
+        </span>
+        <span class="rb-chevron">›</span>
+      </button>`;
+    html += togglePanelHtml(false);
     CATS.forEach(cat => {
       let items = recipes.filter(r => r.cat === cat);
       if (!items.length) return;
@@ -938,6 +1049,7 @@
       items.forEach(r => {
         const st = getRecipeState(r.id);
         const nut = computeNutrition(r, 1, st.overrides);
+        const per = recipePer100(r);
         const total = totalRowCount(r, prefs, st);
         const doneCount = Object.values(st.checked).filter(Boolean).length;
         const checkNote = doneCount > 0
@@ -946,7 +1058,7 @@
           <button class="rb-row" data-open="${r.id}">
             <span class="rb-row-main">
               <span class="rb-row-title">${r.title}</span>
-              <span class="rb-row-meta">${Math.round(nut.kcal)} kcal &nbsp;\u00B7&nbsp; ${Math.round(nut.p)}g protein &nbsp;\u00B7&nbsp; ${Math.round(nut.totalG)}g</span>
+              <span class="rb-row-meta">${Math.round(per.kcal)} kcal &nbsp;\u00B7&nbsp; ${fmt1(per.p)}g protein &nbsp;<i>per 100g</i>&nbsp; \u00B7 &nbsp;${Math.round(effectiveWeight(r, 1, nut.totalG))}g batch</span>
             </span>
             ${checkNote}
             <span class="rb-chevron">\u203A</span>
@@ -954,6 +1066,120 @@
       });
     });
     body.innerHTML = html;
+  }
+
+  function prettyDate(key) {
+    const [y, m, d] = key.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    const t = todayKey();
+    if (key === t) return "Today";
+    const yd = new Date(); yd.setDate(yd.getDate() - 1);
+    if (key === todayKey(yd)) return "Yesterday";
+    return dt.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  }
+  function shiftDate(key, days) {
+    const [y, m, d] = key.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    dt.setDate(dt.getDate() + days);
+    return todayKey(dt);
+  }
+
+  function renderIntake() {
+    headerTitle.textContent = "Daily intake";
+    headerSub.textContent = "Log what you ate, in grams — the macros follow.";
+
+    const log = getDayLog(viewDate);
+    const tot = dayTotals(viewDate);
+    const goals = getGoals();
+    const isToday = viewDate === todayKey();
+
+    const goalBar = (val, goal, label, unit) => {
+      if (!goal) return "";
+      const pct = Math.min(100, Math.round(val / goal * 100));
+      return `
+        <div class="rb-goal">
+          <div class="rb-goal-head"><span>${label}</span><span>${Math.round(val)} / ${goal}${unit} &nbsp;<b>${pct}%</b></span></div>
+          <div class="rb-goal-track"><div class="rb-goal-fill" style="width:${pct}%"></div></div>
+        </div>`;
+    };
+
+    let goalHtml;
+    if (goalEditing) {
+      goalHtml = `
+        <div class="rb-side-input-panel">
+          <p class="rb-side-picker-label" style="margin:0 0 8px;">Daily targets (leave 0 for none)</p>
+          <div class="rb-side-manual-row">
+            <input type="number" min="0" step="any" class="rb-goal-kcal" value="${goals.kcal || 0}">
+            <span>kcal</span>
+          </div>
+          <div class="rb-side-manual-row" style="margin-top:8px;">
+            <input type="number" min="0" step="any" class="rb-goal-p" value="${goals.p || 0}">
+            <span>g protein</span>
+          </div>
+          <button class="rb-side-portion-btn" data-goal-save="1" type="button">Save targets</button>
+          <button class="rb-side-cancel" data-goal-cancel="1" type="button">Cancel</button>
+        </div>`;
+    } else if (goals.kcal || goals.p) {
+      goalHtml = `
+        ${goalBar(tot.kcal, goals.kcal, "Calories", "")}
+        ${goalBar(tot.p, goals.p, "Protein", "g")}
+        <button class="rb-reset" data-goal-edit="1" type="button">Edit targets</button>`;
+    } else {
+      goalHtml = `<button class="rb-reset" data-goal-edit="1" type="button">Set a daily target</button>`;
+    }
+
+    let listHtml;
+    if (!log.length) {
+      listHtml = `<p class="rb-empty">Nothing logged ${isToday ? "yet today" : "for this day"}. Open a recipe and tap “Log what I ate”, or add one below.</p>`;
+    } else {
+      listHtml = log.map(e => `
+        <div class="rb-log-row">
+          <div class="rb-log-main">
+            <div class="rb-log-name">${e.name}</div>
+            <div class="rb-log-meta">${Math.round(e.g)}g &nbsp;·&nbsp; ${Math.round(e.kcal)} kcal &nbsp;·&nbsp; ${fmt1(e.p)}g P &nbsp;·&nbsp; ${fmt1(e.c)}g C &nbsp;·&nbsp; ${fmt1(e.f)}g F</div>
+          </div>
+          <button class="rb-custom-remove" data-log-del="${e.id}" type="button" aria-label="Delete entry">×</button>
+        </div>`).join("");
+    }
+
+    const pickHtml = logPicking === "__intake__" ? `
+      <div class="rb-side-input-panel">
+        <p class="rb-side-picker-label" style="margin:0 0 8px;">Which dish, and how much?</p>
+        <select class="rb-log-recipe">
+          ${recipes.map(r => `<option value="${r.id}">${r.title}</option>`).join("")}
+        </select>
+        <div class="rb-side-manual-row" style="margin-top:10px;">
+          <input type="number" min="0" step="any" class="rb-log-grams" placeholder="grams">
+          <span>g</span>
+        </div>
+        <button class="rb-side-portion-btn" data-log-save="__intake__" type="button">Add to the day</button>
+        <button class="rb-side-cancel" data-log-cancel="1" type="button">Cancel</button>
+      </div>` : `<button class="rb-ate-btn" data-log-open="__intake__" type="button">+ &nbsp;Add something I ate</button>`;
+
+    body.innerHTML = `
+      <button class="rb-back" data-back="1">‹ &nbsp;All recipes</button>
+
+      <div class="rb-day-nav">
+        <button data-day="-1" type="button">‹</button>
+        <span class="rb-day-label">${prettyDate(viewDate)}</span>
+        <button data-day="1" type="button" ${isToday ? "disabled" : ""}>›</button>
+      </div>
+
+      <p class="rb-stats-caption">Eaten ${isToday ? "today" : "that day"}</p>
+      <div class="rb-stats-grid rb-stats-grid-4">
+        ${statBox(Math.round(tot.kcal), "kcal")}
+        ${statBox(fmt1(tot.p) + "g", "protein")}
+        ${statBox(fmt1(tot.c) + "g", "carbs")}
+        ${statBox(fmt1(tot.f) + "g", "fat")}
+      </div>
+      <p class="rb-per100">${log.length} ${log.length === 1 ? "entry" : "entries"} &nbsp;·&nbsp; ${Math.round(tot.g)}g of food</p>
+
+      ${goalHtml}
+
+      <h3 class="rb-section-label" style="margin-top:22px;">Entries</h3>
+      ${listHtml}
+      ${pickHtml}
+    `;
   }
 
   function statBox(num, label) {
@@ -1018,9 +1244,10 @@
       ? "\u20AC" + (r.price * scale).toFixed(2) + (r.tracked ? " (tracked)" : "")
       : "\u2014";
 
-    const per100 = main.totalG > 0 ? {
-      kcal: main.kcal / main.totalG * 100, p: main.p / main.totalG * 100,
-      c: main.c / main.totalG * 100, f: main.f / main.totalG * 100
+    const dishG = effectiveWeight(r, scale, main.totalG);
+    const per100 = dishG > 0 ? {
+      kcal: main.kcal / dishG * 100, p: main.p / dishG * 100,
+      c: main.c / dishG * 100, f: main.f / dishG * 100
     } : { kcal: 0, p: 0, c: 0, f: 0 };
 
     const hasGarlic = r.ingredients.some(i => i.type === "garlic");
@@ -1103,15 +1330,41 @@
       <button class="rb-back" data-back="1">\u2039 &nbsp;All recipes</button>
       <h1 class="rb-recipe-title">${r.title}</h1>
 
-      <div class="rb-stats-grid">
-        ${statBox(Math.round(main.totalG) + "g", "weight")}
-        ${statBox(Math.round(main.kcal), "kcal")}
-        ${statBox(Math.round(main.p) + "g", "protein")}
-        ${statBox(Math.round(main.c) + "g", "carbs")}
-        ${statBox(Math.round(main.f) + "g", "fat")}
-        ${statBox(priceStr, "cost")}
+      <p class="rb-stats-caption">Per 100 g of the finished dish</p>
+      <div class="rb-stats-grid rb-stats-grid-4">
+        ${statBox(Math.round(per100.kcal), "kcal")}
+        ${statBox(fmt1(per100.p) + "g", "protein")}
+        ${statBox(fmt1(per100.c) + "g", "carbs")}
+        ${statBox(fmt1(per100.f) + "g", "fat")}
       </div>
-      <p class="rb-per100">Per 100g of the dish: ${Math.round(per100.kcal)} kcal &nbsp;\u00B7&nbsp; ${Math.round(per100.p)}g protein &nbsp;\u00B7&nbsp; ${Math.round(per100.c)}g carbs &nbsp;\u00B7&nbsp; ${Math.round(per100.f)}g fat</p>
+      ${logPicking === r.id ? `
+        <div class="rb-side-input-panel">
+          <p class="rb-side-picker-label" style="margin:0 0 8px;">How many grams did you eat?</p>
+          <div class="rb-side-manual-row">
+            <input type="number" min="0" step="any" class="rb-log-grams" placeholder="grams">
+            <span>g</span>
+          </div>
+          <p class="rb-log-hint">At ${Math.round(per100.kcal)} kcal / 100 g. One whole batch is ${Math.round(dishG)}g.</p>
+          <button class="rb-side-portion-btn" data-log-save="${r.id}" type="button">Log it</button>
+          <button class="rb-side-cancel" data-log-cancel="1" type="button">Cancel</button>
+        </div>`
+      : `<button class="rb-ate-btn" data-log-open="${r.id}" type="button">+ &nbsp;Log what I ate</button>`}
+      <p class="rb-per100">Whole batch \u2014 ${Math.round(dishG)}g &nbsp;\u00B7&nbsp; ${Math.round(main.kcal)} kcal &nbsp;\u00B7&nbsp; ${Math.round(main.p)}g protein &nbsp;\u00B7&nbsp; ${Math.round(main.c)}g carbs &nbsp;\u00B7&nbsp; ${Math.round(main.f)}g fat &nbsp;\u00B7&nbsp; ${priceStr}</p>
+      ${weighEditing === r.id ? `
+        <div class="rb-side-input-panel">
+          <p class="rb-side-picker-label" style="margin:0 0 8px;">Actual weight of the cooked batch</p>
+          <div class="rb-side-manual-row">
+            <input type="number" min="0" step="any" class="rb-cooked-input" value="${st.cookedG ? Math.round(st.cookedG * scale) : ""}" placeholder="grams">
+            <span>g</span>
+          </div>
+          <p class="rb-log-hint">Weigh the pot contents once after cooking. Raw ingredients come to ${Math.round(main.totalG)}g, but water boils off \u2014 the weighed figure makes every logged portion accurate.</p>
+          <button class="rb-side-portion-btn" data-cooked-save="${r.id}" type="button">Save</button>
+          ${st.cookedG ? `<button class="rb-side-cancel" data-cooked-clear="${r.id}" type="button">Use raw weight instead</button>` : ""}
+          <button class="rb-side-cancel" data-cooked-cancel="1" type="button">Cancel</button>
+        </div>`
+      : `<p class="rb-weigh-line">${st.cookedG
+          ? `Using your weighed cooked batch. <button class="rb-linkbtn" data-cooked-edit="${r.id}" type="button">Change</button>`
+          : `Based on raw ingredient weight. <button class="rb-linkbtn" data-cooked-edit="${r.id}" type="button">Weighed it after cooking?</button>`}</p>`}
       ${hasSide ? `<p class="rb-combined-line">Meal total incl. side: ${Math.round(combined.totalG)}g &nbsp;\u00B7&nbsp; ${Math.round(combined.kcal)} kcal &nbsp;\u00B7&nbsp; ${Math.round(combined.p)}g protein &nbsp;\u00B7&nbsp; ${Math.round(combined.c)}g carbs &nbsp;\u00B7&nbsp; ${Math.round(combined.f)}g fat</p>` : `<div style="margin-bottom:18px;"></div>`}
 
       <div class="rb-servings-row">
@@ -1147,7 +1400,8 @@
   }
 
   function render() {
-    if (currentId) renderRecipe(currentId);
+    if (view === "intake") renderIntake();
+    else if (currentId) renderRecipe(currentId);
     else renderHome();
   }
 
@@ -1155,20 +1409,41 @@
   // through the app (recipe -> home) instead of closing it outright.
   function openRecipe(id) {
     currentId = id;
+    view = "recipe";
+    logPicking = null;
+    weighEditing = null;
     history.pushState({ rb: "recipe", id }, "", "#" + id);
+    render();
+    body.scrollTo(0, 0);
+  }
+  function openIntake() {
+    currentId = null;
+    view = "intake";
+    logPicking = null;
+    weighEditing = null;
+    goalEditing = false;
+    viewDate = todayKey();
+    history.pushState({ rb: "intake" }, "", "#intake");
     render();
     body.scrollTo(0, 0);
   }
   function goHome(fromPop) {
     currentId = null;
+    view = "home";
+    logPicking = null;
+    weighEditing = null;
     if (!fromPop) history.pushState({ rb: "home" }, "", location.pathname + location.search);
     render();
     body.scrollTo(0, 0);
   }
   window.addEventListener("popstate", (e) => {
     const st = e.state;
-    if (st && st.rb === "recipe" && byId[st.id]) { currentId = st.id; render(); }
-    else { currentId = null; render(); }
+    logPicking = null;
+    weighEditing = null;
+    if (st && st.rb === "recipe" && byId[st.id]) { currentId = st.id; view = "recipe"; }
+    else if (st && st.rb === "intake") { currentId = null; view = "intake"; viewDate = viewDate || todayKey(); }
+    else { currentId = null; view = "home"; }
+    render();
   });
 
   function tryAddIngredient() {
@@ -1199,6 +1474,92 @@
 
     const backBtn = e.target.closest("[data-back]");
     if (backBtn) { history.back(); return; }
+
+    const intakeBtn = e.target.closest("[data-intake]");
+    if (intakeBtn) { openIntake(); return; }
+
+    const dayBtn = e.target.closest("[data-day]");
+    if (dayBtn && !dayBtn.disabled) {
+      const next = shiftDate(viewDate, Number(dayBtn.getAttribute("data-day")));
+      if (next <= todayKey()) { viewDate = next; logPicking = null; render(); }
+      return;
+    }
+
+    const logOpenBtn = e.target.closest("[data-log-open]");
+    if (logOpenBtn) { logPicking = logOpenBtn.getAttribute("data-log-open"); render(); return; }
+
+    const logCancelBtn = e.target.closest("[data-log-cancel]");
+    if (logCancelBtn) { logPicking = null; render(); return; }
+
+    const logSaveBtn = e.target.closest("[data-log-save]");
+    if (logSaveBtn) {
+      const which = logSaveBtn.getAttribute("data-log-save");
+      const gInput = body.querySelector(".rb-log-grams");
+      const grams = gInput ? parseFloat(gInput.value) : NaN;
+      if (isNaN(grams) || grams <= 0) return;
+      let rid = which;
+      if (which === "__intake__") {
+        const sel = body.querySelector(".rb-log-recipe");
+        rid = sel ? sel.value : null;
+      } else if (view !== "intake") {
+        viewDate = todayKey();
+      }
+      if (rid) {
+        logIntake(rid, grams);
+        logPicking = null;
+        if (view === "intake") render();
+        else openIntake();
+      }
+      return;
+    }
+
+    const logDelBtn = e.target.closest("[data-log-del]");
+    if (logDelBtn) {
+      const eid = Number(logDelBtn.getAttribute("data-log-del"));
+      const all = getIntake();
+      all[viewDate] = getDayLog(viewDate).filter(x => x.id !== eid);
+      saveState(); render(); return;
+    }
+
+    const cookedEditBtn = e.target.closest("[data-cooked-edit]");
+    if (cookedEditBtn) { weighEditing = cookedEditBtn.getAttribute("data-cooked-edit"); render(); return; }
+    const cookedCancelBtn = e.target.closest("[data-cooked-cancel]");
+    if (cookedCancelBtn) { weighEditing = null; render(); return; }
+    const cookedClearBtn = e.target.closest("[data-cooked-clear]");
+    if (cookedClearBtn) {
+      const st = getRecipeState(cookedClearBtn.getAttribute("data-cooked-clear"));
+      delete st.cookedG;
+      weighEditing = null;
+      saveState(); render(); return;
+    }
+    const cookedSaveBtn = e.target.closest("[data-cooked-save]");
+    if (cookedSaveBtn) {
+      const rid = cookedSaveBtn.getAttribute("data-cooked-save");
+      const st = getRecipeState(rid);
+      const input = body.querySelector(".rb-cooked-input");
+      const val = input ? parseFloat(input.value) : NaN;
+      if (!isNaN(val) && val > 0) st.cookedG = val / st.servings;
+      else delete st.cookedG;
+      weighEditing = null;
+      saveState(); render(); return;
+    }
+
+    const goalEditBtn = e.target.closest("[data-goal-edit]");
+    if (goalEditBtn) { goalEditing = true; render(); return; }
+    const goalCancelBtn = e.target.closest("[data-goal-cancel]");
+    if (goalCancelBtn) { goalEditing = false; render(); return; }
+    const goalSaveBtn = e.target.closest("[data-goal-save]");
+    if (goalSaveBtn) {
+      const kInput = body.querySelector(".rb-goal-kcal");
+      const pInput = body.querySelector(".rb-goal-p");
+      const goals = getGoals();
+      const kv = kInput ? parseFloat(kInput.value) : NaN;
+      const pv = pInput ? parseFloat(pInput.value) : NaN;
+      goals.kcal = isNaN(kv) || kv < 0 ? 0 : Math.round(kv);
+      goals.p = isNaN(pv) || pv < 0 ? 0 : Math.round(pv);
+      goalEditing = false;
+      saveState(); render(); return;
+    }
 
     const incBtn = e.target.closest("[data-inc]");
     if (incBtn && currentId) {
@@ -1325,6 +1686,11 @@
       const btn = body.querySelector("[data-edit-save]");
       if (btn) btn.click();
     }
+    if (e.key === "Enter" && e.target.classList.contains("rb-log-grams")) {
+      e.preventDefault();
+      const btn = body.querySelector("[data-log-save]");
+      if (btn) btn.click();
+    }
   });
 
   root.addEventListener("change", (e) => {
@@ -1343,11 +1709,17 @@
   });
 
   loadState().then(() => {
-    const hashId = location.hash ? location.hash.slice(1) : "";
-    if (hashId && byId[hashId]) {
-      currentId = hashId;
+    viewDate = todayKey();
+    const hash = location.hash ? location.hash.slice(1) : "";
+    if (hash && byId[hash]) {
+      currentId = hash;
+      view = "recipe";
       history.replaceState({ rb: "home" }, "", location.pathname + location.search);
-      history.pushState({ rb: "recipe", id: hashId }, "", "#" + hashId);
+      history.pushState({ rb: "recipe", id: hash }, "", "#" + hash);
+    } else if (hash === "intake") {
+      view = "intake";
+      history.replaceState({ rb: "home" }, "", location.pathname + location.search);
+      history.pushState({ rb: "intake" }, "", "#intake");
     } else {
       history.replaceState({ rb: "home" }, "", location.pathname + location.search);
     }
