@@ -122,6 +122,20 @@
     font-family: inherit; cursor: pointer; }
   .rb-scope-btn b { display: block; font-size: 14px; font-weight: 600; color: var(--mustard); margin-bottom: 2px; }
   .rb-scope-btn span { display: block; font-size: 11.5px; color: var(--muted); }
+  .rb-tabs { display: flex; gap: 6px; margin-bottom: 14px; background: var(--surface); padding: 4px; border-radius: 11px; }
+  .rb-tab { flex: 1; padding: 9px 6px; border: none; border-radius: 8px; background: none; color: var(--muted);
+    font-family: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer; }
+  .rb-tab i { font-style: normal; opacity: .7; font-size: 11.5px; }
+  .rb-tab.is-on { background: var(--bg); color: var(--mustard); }
+  .rb-need-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+    padding: 11px 2px; border: none; border-bottom: 1px solid var(--line); background: none;
+    color: inherit; font-family: inherit; cursor: pointer; }
+  .rb-need-main { flex: 1; min-width: 0; }
+  .rb-need-name { display: block; font-size: 14.5px; margin-bottom: 2px; }
+  .rb-need-meta { display: block; font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rb-need-state { flex: none; font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--muted); border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; }
+  .rb-need-state.is-on { color: var(--mustard); border-color: rgba(201,160,74,.45); }
   .rb-pan-row { display: flex; gap: 10px; align-items: flex-start; padding: 12px 2px; border-bottom: 1px solid var(--line); }
   .rb-pan-main { flex: 1; min-width: 0; }
   .rb-pan-name { font-size: 14.5px; font-weight: 500; margin-bottom: 3px; }
@@ -878,6 +892,8 @@
   let weighEditing = null; // recipeId whose cooked-weight panel is open
   let macroEditing = null;  // {id, idx, photo} — ingredient whose packet-macros panel is open
   let breakdownOpen = null; // recipeId whose macro breakdown is expanded
+  let pantryTab = "needed";  // which of the two product lists is showing
+  let pantryEditing = null;  // {key, label, product, scanned, scanMsg, scanOk}
   const tempMacros = {};    // "recipeId:idx" -> product, for a single cook only (never saved)
   let calcFlash = null;     // recipeId briefly confirming a recalculation
   const sidePicking = {}; // transient UI state: recipeId -> side type key currently being configured
@@ -1580,16 +1596,82 @@
     return out;
   }
 
+  // Every distinct ingredient across all recipes, with how many recipes want it
+  // and whether a real product currently stands in for it.
+  function allIngredients() {
+    const map = {};
+    recipes.forEach(r => {
+      r.ingredients.forEach(ing => {
+        if (ing.a === null && !getNutKey(ing)) return;
+        const key = ingredientKey(ing);
+        if (!map[key]) {
+          const label = String(ing.n || "").split(",")[0].trim() || key.replace(/^name:/, "");
+          map[key] = { key: key, label: label, recipes: [], code: null };
+        }
+        if (map[key].recipes.indexOf(r.title) === -1) map[key].recipes.push(r.title);
+      });
+    });
+    const defs = getDefaults();
+    const pantry = getPantry();
+    Object.keys(map).forEach(k => {
+      const code = defs[k];
+      map[k].code = code && pantry[code] ? code : null;
+      map[k].product = map[k].code ? pantry[map[k].code] : null;
+    });
+    return Object.keys(map).map(k => map[k])
+      .sort((a, b) => (b.recipes.length - a.recipes.length) || a.label.localeCompare(b.label));
+  }
+
   function renderPantry() {
     headerTitle.textContent = "My products";
-    headerSub.textContent = "Everything you have scanned, kept on this phone.";
+    headerSub.textContent = "What the recipes need, and what you have scanned.";
 
     const pantry = getPantry();
     const codes = Object.keys(pantry);
+    const items = allIngredients();
+    const covered = items.filter(i => i.code).length;
+
+    const tabs = `
+      <div class="rb-tabs">
+        <button class="rb-tab ${pantryTab === "needed" ? "is-on" : ""}" data-ptab="needed" type="button">Needed <i>${covered}/${items.length}</i></button>
+        <button class="rb-tab ${pantryTab === "mine" ? "is-on" : ""}" data-ptab="mine" type="button">My pantry <i>${codes.length}</i></button>
+      </div>`;
 
     let listHtml;
-    if (!codes.length) {
-      listHtml = `<p class="rb-empty">Nothing scanned yet. Open a recipe, tap 🏷 on an ingredient and scan a barcode — the product is saved here and can stand in for that ingredient in every recipe.</p>`;
+    if (pantryTab === "needed") {
+      listHtml = items.map(it => {
+        if (pantryEditing && pantryEditing.key === it.key) {
+          const m = pantryEditing.scanned || (it.product || {});
+          return `
+            <div class="rb-side-input-panel" style="margin:8px 0;">
+              <p class="rb-side-picker-label" style="margin:0 0 8px;">${it.label}</p>
+              <button class="rb-scan-btn" data-pscan="1" type="button">\u25A5 &nbsp;Scan barcode</button>
+              ${pantryEditing.scanMsg ? `<p class="rb-scan-result ${pantryEditing.scanOk ? "is-ok" : "is-bad"}">${pantryEditing.scanMsg}</p>` : ""}
+              ${pantryEditing.product ? `<p class="rb-scope-name" style="margin:8px 0 2px;">${pantryEditing.product.name}</p>` : ""}
+              <div class="rb-macro-grid">
+                <label><span>kcal</span><input type="number" min="0" step="any" class="rb-m-kcal" value="${m.kcal !== undefined ? m.kcal : ""}"></label>
+                <label><span>protein</span><input type="number" min="0" step="any" class="rb-m-p" value="${m.p !== undefined ? m.p : ""}"></label>
+                <label><span>carbs</span><input type="number" min="0" step="any" class="rb-m-c" value="${m.c !== undefined ? m.c : ""}"></label>
+                <label><span>fat</span><input type="number" min="0" step="any" class="rb-m-f" value="${m.f !== undefined ? m.f : ""}"></label>
+              </div>
+              <p class="rb-log-hint">Saved here, these figures are used in all ${it.recipes.length} ${it.recipes.length === 1 ? "recipe" : "recipes"} that use ${it.label}.</p>
+              <button class="rb-side-portion-btn" data-psave="1" type="button">Use everywhere</button>
+              ${it.code ? `<button class="rb-side-cancel" data-pclear="1" type="button">Back to the general value</button>` : ""}
+              <button class="rb-side-cancel" data-pcancel="1" type="button">Cancel</button>
+            </div>`;
+        }
+        return `
+          <button class="rb-need-row" data-pedit="${it.key}" type="button">
+            <span class="rb-need-main">
+              <span class="rb-need-name">${it.label}</span>
+              <span class="rb-need-meta">${it.recipes.length} ${it.recipes.length === 1 ? "recipe" : "recipes"}${it.product ? " &nbsp;\u00B7&nbsp; " + it.product.name : ""}</span>
+            </span>
+            <span class="rb-need-state ${it.code ? "is-on" : ""}">${it.code ? "\u2713 yours" : "general"}</span>
+          </button>`;
+      }).join("");
+      listHtml = `<p class="rb-log-hint">${covered} of ${items.length} ingredients are running on your own products. Tap any one to scan it or type its figures — it then applies in every recipe that uses it.</p>` + listHtml;
+    } else if (!codes.length) {
+      listHtml = `<p class="rb-empty">Nothing scanned yet. Open the Needed list and scan a barcode \u2014 saved products show up here.</p>`;
     } else {
       listHtml = codes.map(code => {
         const prod = pantry[code];
@@ -1602,20 +1684,19 @@
           <div class="rb-pan-row">
             <div class="rb-pan-main">
               <div class="rb-pan-name">${prod.name}</div>
-              <div class="rb-pan-macros">${prod.kcal} kcal &nbsp;·&nbsp; ${prod.p}g P &nbsp;·&nbsp; ${prod.c}g C &nbsp;·&nbsp; ${prod.f}g F &nbsp;<i>per 100g</i></div>
+              <div class="rb-pan-macros">${prod.kcal} kcal &nbsp;\u00B7&nbsp; ${prod.p}g P &nbsp;\u00B7&nbsp; ${prod.c}g C &nbsp;\u00B7&nbsp; ${prod.f}g F &nbsp;<i>per 100g</i></div>
               ${used}
-              <div class="rb-pan-code">${code}</div>
+              <div class="rb-pan-code">${String(code).indexOf("manual:") === 0 ? "typed by hand" : code}</div>
             </div>
-            <button class="rb-custom-remove" data-pantry-del="${code}" type="button" aria-label="Delete product">×</button>
+            <button class="rb-custom-remove" data-pantry-del="${code}" type="button" aria-label="Delete product">\u00D7</button>
           </div>`;
-      }).join("");
+      }).join("") + `<p class="rb-log-hint" style="margin-top:16px;">Deleting a product also removes it from the recipes using it, which fall back to the general values.</p>`;
     }
 
     body.innerHTML = `
-      <button class="rb-back" data-back="1">‹ &nbsp;All recipes</button>
-      <p class="rb-stats-caption">${codes.length} ${codes.length === 1 ? "product" : "products"} saved</p>
+      <button class="rb-back" data-back="1">\u2039 &nbsp;All recipes</button>
+      ${tabs}
       ${listHtml}
-      <p class="rb-log-hint" style="margin-top:16px;">Deleting a product also removes it from the recipes using it, which fall back to the general values.</p>
     `;
   }
 
@@ -1956,7 +2037,7 @@
   function openPantry() {
     currentId = null;
     view = "pantry";
-    logPicking = null; weighEditing = null; macroEditing = null;
+    logPicking = null; weighEditing = null; macroEditing = null; pantryEditing = null;
     history.pushState({ rb: "pantry" }, "", "#pantry");
     render();
     body.scrollTo(0, 0);
@@ -2017,6 +2098,76 @@
 
     const pantryBtn = e.target.closest("[data-pantry]");
     if (pantryBtn) { openPantry(); return; }
+
+    const ptabBtn = e.target.closest("[data-ptab]");
+    if (ptabBtn) { pantryTab = ptabBtn.getAttribute("data-ptab"); pantryEditing = null; render(); return; }
+
+    const pEditBtn = e.target.closest("[data-pedit]");
+    if (pEditBtn) {
+      const key = pEditBtn.getAttribute("data-pedit");
+      const it = allIngredients().filter(x => x.key === key)[0];
+      pantryEditing = { key: key, label: it ? it.label : key, product: null, scanned: null, scanMsg: null, scanOk: true };
+      render(); return;
+    }
+    const pCancelBtn = e.target.closest("[data-pcancel]");
+    if (pCancelBtn) { pantryEditing = null; render(); return; }
+
+    const pScanBtn = e.target.closest("[data-pscan]");
+    if (pScanBtn && pantryEditing) {
+      const key = pantryEditing.key;
+      openScanner(code => {
+        if (!pantryEditing || pantryEditing.key !== key) return;
+        pantryEditing.scanMsg = "Looking up " + code + "\u2026";
+        pantryEditing.scanOk = true;
+        render();
+        lookupBarcode(code).then(entry => {
+          if (!pantryEditing || pantryEditing.key !== key) return;
+          pantryEditing.product = entry;
+          pantryEditing.scanned = { kcal: entry.kcal, p: entry.p, c: entry.c, f: entry.f };
+          pantryEditing.scanMsg = null;
+          render();
+        }).catch(err => {
+          if (!pantryEditing || pantryEditing.key !== key) return;
+          const why = err && err.message;
+          pantryEditing.scanMsg =
+            why === "notfound" ? "Barcode " + code + " isn't in the food database \u2014 type the values from the label."
+            : why === "nonutrition" ? "That product is listed but has no nutrition figures \u2014 type them from the label."
+            : "Couldn't reach the food database. Type the values, or try again when you have signal.";
+          pantryEditing.scanOk = false;
+          render();
+        });
+      });
+      return;
+    }
+
+    const pSaveBtn = e.target.closest("[data-psave]");
+    if (pSaveBtn && pantryEditing) {
+      const num = cls => {
+        const el = body.querySelector(cls);
+        const v = el ? parseFloat(el.value) : NaN;
+        return isNaN(v) || v < 0 ? null : v;
+      };
+      const kcal = num(".rb-m-kcal"), pp = num(".rb-m-p"), cc = num(".rb-m-c"), ff = num(".rb-m-f");
+      if (kcal === null && pp === null && cc === null && ff === null) { pantryEditing = null; render(); return; }
+      const prod = pantryEditing.product;
+      const code = prod ? prod.code : ("manual:" + pantryEditing.key);
+      getPantry()[code] = {
+        code: code,
+        name: prod ? prod.name : pantryEditing.label,
+        kcal: kcal === null ? 0 : kcal, p: pp === null ? 0 : pp,
+        c: cc === null ? 0 : cc, f: ff === null ? 0 : ff
+      };
+      getDefaults()[pantryEditing.key] = code;
+      pantryEditing = null;
+      saveState(); render(); return;
+    }
+
+    const pClearBtn = e.target.closest("[data-pclear]");
+    if (pClearBtn && pantryEditing) {
+      delete getDefaults()[pantryEditing.key];
+      pantryEditing = null;
+      saveState(); render(); return;
+    }
 
     const panDelBtn = e.target.closest("[data-pantry-del]");
     if (panDelBtn) {
