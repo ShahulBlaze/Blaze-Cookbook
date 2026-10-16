@@ -107,6 +107,30 @@
   .rb-macro-btn { flex: none; background: none; border: none; font-size: 15px; line-height: 1; padding: 4px 6px;
     cursor: pointer; opacity: .45; filter: grayscale(1); }
   .rb-macro-btn.is-set { opacity: 1; filter: none; }
+  .rb-macro-btn.src-everywhere { opacity: 1; filter: none; }
+  .rb-macro-btn.src-recipe { opacity: 1; filter: none; }
+  .rb-macro-btn.src-recipe::after, .rb-macro-btn.src-once::after { content: ""; display: block; height: 2px;
+    border-radius: 2px; background: var(--mustard); margin-top: 1px; }
+  .rb-macro-btn.src-once { opacity: 1; filter: none; }
+  .rb-macro-btn.src-once::after { background: #8fb3c9; }
+  .rb-scope { margin: 10px 0 4px; padding: 12px; border-radius: 10px; background: var(--bg); border: 1px solid rgba(201,160,74,.35); }
+  .rb-scope-name { font-size: 14.5px; font-weight: 600; margin: 0 0 3px; }
+  .rb-scope-macros { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+  .rb-scope-q { font-size: 12.5px; color: var(--muted); margin: 0 0 8px; }
+  .rb-scope-btn { display: block; width: 100%; text-align: left; margin-bottom: 7px; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: inherit;
+    font-family: inherit; cursor: pointer; }
+  .rb-scope-btn b { display: block; font-size: 14px; font-weight: 600; color: var(--mustard); margin-bottom: 2px; }
+  .rb-scope-btn span { display: block; font-size: 11.5px; color: var(--muted); }
+  .rb-pan-row { display: flex; gap: 10px; align-items: flex-start; padding: 12px 2px; border-bottom: 1px solid var(--line); }
+  .rb-pan-main { flex: 1; min-width: 0; }
+  .rb-pan-name { font-size: 14.5px; font-weight: 500; margin-bottom: 3px; }
+  .rb-pan-macros { font-size: 12px; color: var(--muted); margin-bottom: 5px; }
+  .rb-pan-use { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 5px;
+    background: var(--surface); color: var(--muted); }
+  .rb-pan-use.is-every { color: var(--mustard); border: 1px solid rgba(201,160,74,.4); }
+  .rb-pan-use.is-idle { opacity: .6; }
+  .rb-pan-code { font-size: 10.5px; color: var(--muted); opacity: .6; margin-top: 5px; font-variant-numeric: tabular-nums; }
   .rb-scan-btn { display: block; width: 100%; margin: 10px 0 6px; padding: 12px; border: none; border-radius: 10px;
     background: var(--mustard); color: #211c14; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
   .rb-scan-result { font-size: 12.5px; margin: 6px 0; padding: 8px 10px; border-radius: 8px; background: var(--bg); }
@@ -372,6 +396,27 @@
     const key = getNutKey(ing);
     return key && NUT[key] ? NUT[key] : null;
   }
+  // Most specific wins: a one-off for this cook, then a product pinned to this
+  // recipe, then the product standing in for this ingredient everywhere, then
+  // the built-in reference table.
+  function resolveMacro(recipeId, ing, idx, st) {
+    const once = tempMacros[recipeId + ":" + idx];
+    if (once) return { macro: macrosOf(once), source: "once", prod: once };
+    const pinned = st.macros && st.macros[idx];
+    if (pinned) {
+      if (pinned.code) {
+        const prod = getPantry()[pinned.code];
+        if (prod) return { macro: macrosOf(prod), source: "recipe", prod: prod };
+      }
+      return { macro: { kcal: pinned.kcal, p: pinned.p, c: pinned.c, f: pinned.f }, source: "recipe", prod: pinned };
+    }
+    const code = getDefaults()[ingredientKey(ing)];
+    if (code) {
+      const prod = getPantry()[code];
+      if (prod) return { macro: macrosOf(prod), source: "everywhere", prod: prod };
+    }
+    return { macro: null, source: "general", prod: null };
+  }
   function addToNut(acc, ing, amt) {
     const g = trueGrams(ing, amt);
     acc.totalG += g;
@@ -382,15 +427,16 @@
   }
   // applies per-recipe user overrides (removed ingredients, edited quantities) to the
   // recipe's base ingredient list, carrying the original array index along as _idx
-  function effectiveIngredients(r, overrides, macros) {
-    const ov = overrides || {};
-    const mc = macros || {};
+  function effectiveIngredients(r, overrides) {
+    const st = getRecipeState(r.id);
+    const ov = overrides || st.overrides || {};
     const out = [];
     r.ingredients.forEach((ing, idx) => {
       const o = ov[idx];
       if (o && o.removed) return;
       const extra = { _idx: idx };
-      if (mc[idx]) extra._macro = mc[idx];
+      const res = resolveMacro(r.id, ing, idx, st);
+      if (res.macro) { extra._macro = res.macro; extra._src = res.source; extra._prod = res.prod; }
       if (o && o.amount !== undefined) extra.a = o.amount;
       out.push(Object.assign({}, ing, extra));
     });
@@ -398,17 +444,17 @@
   }
   // main-dish nutrition only -- single-pot carbs (fried rice, pasta bolognese) are already
   // ordinary ingredients here and count normally; there is no separate "side" ingredient anymore
-  function computeNutrition(r, scale, overrides, macros) {
+  function computeNutrition(r, scale, overrides) {
     const main = emptyNut();
-    effectiveIngredients(r, overrides, macros).forEach(ing => {
+    effectiveIngredients(r, overrides).forEach(ing => {
       if (ing.a === null) return;
       addToNut(main, ing, ing.a * scale);
     });
     return main;
   }
   // per-ingredient contribution, so the totals can be shown as a breakdown
-  function nutritionBreakdown(r, scale, overrides, macros) {
-    return effectiveIngredients(r, overrides, macros).map(ing => {
+  function nutritionBreakdown(r, scale, overrides) {
+    return effectiveIngredients(r, overrides).map(ing => {
       if (ing.a === null) return null;
       const amt = ing.a * scale;
       const g = trueGrams(ing, amt);
@@ -418,6 +464,8 @@
         name: baseLabel(ing),
         g: g,
         measured: !!ing._macro,
+        src: ing._src || "general",
+        prodName: ing._prod && ing._prod.name ? ing._prod.name : null,
         known: !!n,
         kcal: n ? g * n.kcal / 100 : 0,
         p: n ? g * n.p / 100 : 0,
@@ -830,6 +878,7 @@
   let weighEditing = null; // recipeId whose cooked-weight panel is open
   let macroEditing = null;  // {id, idx, photo} — ingredient whose packet-macros panel is open
   let breakdownOpen = null; // recipeId whose macro breakdown is expanded
+  const tempMacros = {};    // "recipeId:idx" -> product, for a single cook only (never saved)
   let calcFlash = null;     // recipeId briefly confirming a recalculation
   const sidePicking = {}; // transient UI state: recipeId -> side type key currently being configured
   const editingIng = {}; // transient UI state: recipeId -> ingredient idx currently being edited
@@ -859,9 +908,38 @@
   // cached locally, so a repeat scan of the same tin works with no signal.
   const OFF_URL = "https://world.openfoodfacts.org/api/v2/product/";
 
-  function getBarcodeCache() {
-    if (!state._barcodes) state._barcodes = {};
-    return state._barcodes;
+  // The pantry: every product ever scanned, kept on this phone. Keyed by
+  // barcode, because that is the one identifier a tin actually carries.
+  function getPantry() {
+    if (!state._pantry) {
+      state._pantry = {};
+      // carry over anything saved by the earlier flat barcode cache
+      if (state._barcodes) {
+        Object.keys(state._barcodes).forEach(code => { state._pantry[code] = state._barcodes[code]; });
+        delete state._barcodes;
+      }
+    }
+    return state._pantry;
+  }
+  // Which pantry product stands in for an ingredient everywhere it appears:
+  // ingredient key -> barcode.
+  function getDefaults() {
+    if (!state._defaults) state._defaults = {};
+    return state._defaults;
+  }
+  // Identity of an ingredient across recipes. The nutrition key is the right
+  // grain — "kidney beans" is the same thing in every pot — with the name as a
+  // fallback for ingredients the table does not know.
+  function ingredientKey(ing) {
+    return getNutKey(ing) || ("name:" + String(ing.n || "").toLowerCase().replace(/[^a-z]+/g, " ").trim());
+  }
+  function ingLabelFor(r, idx) {
+    const ing = r.ingredients[idx];
+    const key = getNutKey(ing);
+    return key ? key.replace(/_/g, " ") : (ing.n || "this ingredient");
+  }
+  function macrosOf(prod) {
+    return prod ? { kcal: prod.kcal, p: prod.p, c: prod.c, f: prod.f } : null;
   }
 
   function nutrimentsToMacros(n) {
@@ -885,7 +963,7 @@
   }
 
   async function lookupBarcode(code) {
-    const cache = getBarcodeCache();
+    const cache = getPantry();
     if (cache[code]) return cache[code];
     let res;
     try {
@@ -1109,7 +1187,7 @@
   // per-100g profile of a recipe as it is currently configured (edits included)
   function recipePer100(r) {
     const st = getRecipeState(r.id);
-    const n = computeNutrition(r, 1, st.overrides, st.macros);
+    const n = computeNutrition(r, 1, st.overrides);
     const w = effectiveWeight(r, 1, n.totalG);
     if (!w) return { kcal: 0, p: 0, c: 0, f: 0 };
     return {
@@ -1334,6 +1412,15 @@
         </span>
         <span class="rb-chevron">›</span>
       </button>`;
+    const pantryCount = Object.keys(getPantry()).length;
+    html += `
+      <button class="rb-intake-card" data-pantry="1" type="button">
+        <span class="rb-intake-main">
+          <span class="rb-intake-title">My products</span>
+          <span class="rb-intake-meta">${pantryCount ? pantryCount + (pantryCount === 1 ? " product" : " products") + " scanned and saved" : "Scan a barcode to start your pantry"}</span>
+        </span>
+        <span class="rb-chevron">\u203A</span>
+      </button>`;
     html += togglePanelHtml(false);
     CATS.forEach(cat => {
       let items = recipes.filter(r => r.cat === cat);
@@ -1341,7 +1428,7 @@
       html += `<h2 class="rb-cat-heading">${cat}</h2>`;
       items.forEach(r => {
         const st = getRecipeState(r.id);
-        const nut = computeNutrition(r, 1, st.overrides, st.macros);
+        const nut = computeNutrition(r, 1, st.overrides);
         const per = recipePer100(r);
         const total = totalRowCount(r, prefs, st);
         const doneCount = Object.values(st.checked).filter(Boolean).length;
@@ -1475,6 +1562,63 @@
     `;
   }
 
+  // Where each pantry product is in force: the ingredients it stands in for
+  // everywhere, plus any recipes that pinned it to themselves.
+  function bindingsFor(code) {
+    const out = { everywhere: [], recipes: [] };
+    const defs = getDefaults();
+    Object.keys(defs).forEach(k => {
+      if (defs[k] === code) out.everywhere.push(k.replace(/^name:/, "").replace(/_/g, " "));
+    });
+    recipes.forEach(r => {
+      const st = state[r.id];
+      if (!st || !st.macros) return;
+      Object.keys(st.macros).forEach(idx => {
+        if (st.macros[idx] && st.macros[idx].code === code) out.recipes.push(r.title);
+      });
+    });
+    return out;
+  }
+
+  function renderPantry() {
+    headerTitle.textContent = "My products";
+    headerSub.textContent = "Everything you have scanned, kept on this phone.";
+
+    const pantry = getPantry();
+    const codes = Object.keys(pantry);
+
+    let listHtml;
+    if (!codes.length) {
+      listHtml = `<p class="rb-empty">Nothing scanned yet. Open a recipe, tap 🏷 on an ingredient and scan a barcode — the product is saved here and can stand in for that ingredient in every recipe.</p>`;
+    } else {
+      listHtml = codes.map(code => {
+        const prod = pantry[code];
+        const b = bindingsFor(code);
+        let used;
+        if (b.everywhere.length) used = `<span class="rb-pan-use is-every">Used for ${b.everywhere.join(", ")} everywhere</span>`;
+        else if (b.recipes.length) used = `<span class="rb-pan-use">Used in ${b.recipes.join(", ")}</span>`;
+        else used = `<span class="rb-pan-use is-idle">Saved, not in use</span>`;
+        return `
+          <div class="rb-pan-row">
+            <div class="rb-pan-main">
+              <div class="rb-pan-name">${prod.name}</div>
+              <div class="rb-pan-macros">${prod.kcal} kcal &nbsp;·&nbsp; ${prod.p}g P &nbsp;·&nbsp; ${prod.c}g C &nbsp;·&nbsp; ${prod.f}g F &nbsp;<i>per 100g</i></div>
+              ${used}
+              <div class="rb-pan-code">${code}</div>
+            </div>
+            <button class="rb-custom-remove" data-pantry-del="${code}" type="button" aria-label="Delete product">×</button>
+          </div>`;
+      }).join("");
+    }
+
+    body.innerHTML = `
+      <button class="rb-back" data-back="1">‹ &nbsp;All recipes</button>
+      <p class="rb-stats-caption">${codes.length} ${codes.length === 1 ? "product" : "products"} saved</p>
+      ${listHtml}
+      <p class="rb-log-hint" style="margin-top:16px;">Deleting a product also removes it from the recipes using it, which fall back to the general values.</p>
+    `;
+  }
+
   function statBox(num, label) {
     const cls = "rb-stat-" + label.replace(/[^a-z]/gi, "").toLowerCase();
     return `<div class="rb-stat ${cls}"><div class="rb-stat-num">${num}</div><div class="rb-stat-label">${label}</div></div>`;
@@ -1531,7 +1675,7 @@
     headerTitle.textContent = r.title;
     headerSub.textContent = r.cat;
 
-    const main = computeNutrition(r, scale, st.overrides, st.macros);
+    const main = computeNutrition(r, scale, st.overrides);
     const sideNut = computeSideNut(st.side);
     const priceStr = r.price !== null
       ? "\u20AC" + (r.price * scale).toFixed(2) + (r.tracked ? " (tracked)" : "")
@@ -1580,9 +1724,29 @@
         return `
           <div class="rb-side-input-panel" style="margin:6px 0;">
             <p class="rb-side-picker-label" style="margin:0 0 8px;">${r.ingredients[row.editIdx].n}</p>
-            <p class="rb-log-hint" style="margin-top:0;">Scan the barcode to fill these in automatically, or photograph the label and type them yourself.</p>
+            ${(() => {
+              const cur = resolveMacro(r.id, r.ingredients[row.editIdx], row.editIdx, st);
+              if (cur.source === "general") return `<p class="rb-log-hint" style="margin-top:0;">Scan the barcode to fill these in automatically, or photograph the label and type them yourself.</p>`;
+              const where = { everywhere: "in every recipe", recipe: "in this recipe", once: "for this cook only" }[cur.source];
+              return `<p class="rb-scan-result is-ok" style="margin-top:0;">Now using <b>${cur.prod && cur.prod.name ? cur.prod.name : "your own values"}</b> ${where}.</p>`;
+            })()}
             <button class="rb-scan-btn" data-scan-for="${row.editIdx}" type="button">\u25A5 &nbsp;Scan barcode</button>
             ${macroEditing.scanMsg ? `<p class="rb-scan-result ${macroEditing.scanOk ? "is-ok" : "is-bad"}">${macroEditing.scanMsg}</p>` : ""}
+            ${macroEditing.product ? `
+              <div class="rb-scope">
+                <p class="rb-scope-name">${macroEditing.product.name}</p>
+                <p class="rb-scope-macros">${macroEditing.product.kcal} kcal &nbsp;\u00B7&nbsp; ${macroEditing.product.p}g P &nbsp;\u00B7&nbsp; ${macroEditing.product.c}g C &nbsp;\u00B7&nbsp; ${macroEditing.product.f}g F &nbsp;<i>per 100g</i></p>
+                <p class="rb-scope-q">Where should this product apply?</p>
+                <button class="rb-scope-btn" data-scope="everywhere" type="button">
+                  <b>Everywhere</b><span>Every recipe using ${ingLabelFor(r, row.editIdx)}, from now on</span>
+                </button>
+                <button class="rb-scope-btn" data-scope="recipe" type="button">
+                  <b>This recipe only</b><span>Just ${r.title}, saved for next time</span>
+                </button>
+                <button class="rb-scope-btn" data-scope="once" type="button">
+                  <b>Just this once</b><span>This cook only \u2014 forgotten when you close the app</span>
+                </button>
+              </div>` : ""}
             ${shot ? `<img class="rb-label-shot" src="${shot}" alt="label">` : ""}
             <label class="rb-photo-btn">
               ${shot ? "Retake photo" : "\uD83D\uDCF7 &nbsp;Take photo of label"}
@@ -1595,17 +1759,20 @@
               <label><span>fat</span><input type="number" min="0" step="any" class="rb-m-f" value="${m.f !== undefined ? m.f : ""}" placeholder="${ref ? ref.f : ""}"></label>
             </div>
             <p class="rb-log-hint">${ref ? `Greyed numbers are the general values in use now.` : `No general value for this one \u2014 it currently counts as zero.`}</p>
-            <button class="rb-side-portion-btn" data-macro-save="${row.editIdx}" type="button">Save these values</button>
-            ${st.macros[row.editIdx] ? `<button class="rb-side-cancel" data-macro-clear="${row.editIdx}" type="button">Back to general value</button>` : ""}
+            <button class="rb-side-portion-btn" data-macro-save="${row.editIdx}" type="button">Save for this recipe</button>
+            ${resolveMacro(r.id, r.ingredients[row.editIdx], row.editIdx, st).source !== "general"
+              ? `<button class="rb-side-cancel" data-macro-clear="${row.editIdx}" type="button">Back to the general value</button>` : ""}
             <button class="rb-side-cancel" data-macro-cancel="1" type="button">Cancel</button>
           </div>`;
       }
       const checked = !!st.checked[row.key];
-      const measured = row.editIdx !== undefined && st.macros[row.editIdx];
+      const src = row.editIdx !== undefined
+        ? resolveMacro(r.id, r.ingredients[row.editIdx], row.editIdx, st).source : "general";
+      const srcTitle = { everywhere: "Your product, used everywhere", recipe: "Your product, this recipe", once: "Your product, just this cook" }[src] || "Macros from the packet";
       const editBtn = row.editIdx !== undefined
         ? `<button class="rb-custom-remove" data-edit-ing="${row.editIdx}" type="button" aria-label="Edit or remove">\u270E</button>` : "";
       const macroBtn = row.editIdx !== undefined
-        ? `<button class="rb-macro-btn ${measured ? "is-set" : ""}" data-macro-ing="${row.editIdx}" type="button" aria-label="Macros from the packet">${measured ? "\u2713\u2009\uD83C\uDFF7" : "\uD83C\uDFF7"}</button>` : "";
+        ? `<button class="rb-macro-btn src-${src}" data-macro-ing="${row.editIdx}" type="button" title="${srcTitle}" aria-label="${srcTitle}">\uD83C\uDFF7</button>` : "";
       return `
         <label class="rb-ing-row">
           <input type="checkbox" class="rb-ing-check" data-key="${row.key}" ${checked ? "checked" : ""}>
@@ -1644,7 +1811,7 @@
     const measuredCount = Object.keys(st.macros).length;
     const countableIng = r.ingredients.filter(i => i.a !== null).length;
     const showBreakdown = breakdownOpen === r.id;
-    const breakdown = showBreakdown ? nutritionBreakdown(r, scale, st.overrides, st.macros) : [];
+    const breakdown = showBreakdown ? nutritionBreakdown(r, scale, st.overrides) : [];
 
     const stepsHtml = `<ol class="rb-steps">${r.steps.map((s, i) => `
         <li class="rb-step"><span class="rb-step-num">${i + 1}</span><span class="rb-step-text">${s}</span></li>`).join("")}</ol>`;
@@ -1756,7 +1923,8 @@
   function r_byId(id) { return byId[id]; }
 
   function render() {
-    if (view === "intake") renderIntake();
+    if (view === "pantry") renderPantry();
+    else if (view === "intake") renderIntake();
     else if (currentId) renderRecipe(currentId);
     else renderHome();
   }
@@ -1785,6 +1953,14 @@
     render();
     body.scrollTo(0, 0);
   }
+  function openPantry() {
+    currentId = null;
+    view = "pantry";
+    logPicking = null; weighEditing = null; macroEditing = null;
+    history.pushState({ rb: "pantry" }, "", "#pantry");
+    render();
+    body.scrollTo(0, 0);
+  }
   function goHome(fromPop) {
     currentId = null;
     view = "home";
@@ -1802,6 +1978,7 @@
     macroEditing = null;
     if (st && st.rb === "recipe" && byId[st.id]) { currentId = st.id; view = "recipe"; }
     else if (st && st.rb === "intake") { currentId = null; view = "intake"; viewDate = viewDate || todayKey(); }
+    else if (st && st.rb === "pantry") { currentId = null; view = "pantry"; }
     else { currentId = null; view = "home"; }
     render();
   });
@@ -1837,6 +2014,26 @@
 
     const intakeBtn = e.target.closest("[data-intake]");
     if (intakeBtn) { openIntake(); return; }
+
+    const pantryBtn = e.target.closest("[data-pantry]");
+    if (pantryBtn) { openPantry(); return; }
+
+    const panDelBtn = e.target.closest("[data-pantry-del]");
+    if (panDelBtn) {
+      const code = panDelBtn.getAttribute("data-pantry-del");
+      delete getPantry()[code];
+      const defs = getDefaults();
+      Object.keys(defs).forEach(k => { if (defs[k] === code) delete defs[k]; });
+      recipes.forEach(r => {
+        const st = state[r.id];
+        if (!st || !st.macros) return;
+        Object.keys(st.macros).forEach(idx => {
+          if (st.macros[idx] && st.macros[idx].code === code) delete st.macros[idx];
+        });
+      });
+      Object.keys(tempMacros).forEach(k => { if (tempMacros[k] && tempMacros[k].code === code) delete tempMacros[k]; });
+      saveState(); render(); return;
+    }
 
     const dayBtn = e.target.closest("[data-day]");
     if (dayBtn && !dayBtn.disabled) {
@@ -1884,7 +2081,7 @@
     const macroIngBtn = e.target.closest("[data-macro-ing]");
     if (macroIngBtn && currentId) {
       const idx = Number(macroIngBtn.getAttribute("data-macro-ing"));
-      macroEditing = { id: currentId, idx: idx, photo: null };
+      macroEditing = { id: currentId, idx: idx, photo: null, product: null, scanned: null, scanMsg: null };
       render();
       photoGet(photoKey(currentId, idx)).then(url => {
         if (url && macroEditing && macroEditing.id === currentId && macroEditing.idx === idx) {
@@ -1904,7 +2101,8 @@
         lookupBarcode(code).then(entry => {
           if (!macroEditing || macroEditing.id !== target.id || macroEditing.idx !== target.idx) return;
           macroEditing.scanned = { kcal: entry.kcal, p: entry.p, c: entry.c, f: entry.f };
-          macroEditing.scanMsg = entry.name + " — check the numbers, then save.";
+          macroEditing.product = entry;
+          macroEditing.scanMsg = null;
           macroEditing.scanOk = true;
           render();
         }).catch(err => {
@@ -1921,6 +2119,29 @@
       return;
     }
 
+    const scopeBtn = e.target.closest("[data-scope]");
+    if (scopeBtn && currentId && macroEditing && macroEditing.product) {
+      const scope = scopeBtn.getAttribute("data-scope");
+      const r = byId[currentId];
+      const idx = macroEditing.idx;
+      const prod = macroEditing.product;
+      const st = getRecipeState(currentId);
+      getPantry()[prod.code] = prod;
+      if (scope === "everywhere") {
+        getDefaults()[ingredientKey(r.ingredients[idx])] = prod.code;
+        delete st.macros[idx];
+        delete tempMacros[currentId + ":" + idx];
+      } else if (scope === "recipe") {
+        st.macros[idx] = { kcal: prod.kcal, p: prod.p, c: prod.c, f: prod.f, code: prod.code };
+        delete tempMacros[currentId + ":" + idx];
+      } else {
+        tempMacros[currentId + ":" + idx] = prod;
+      }
+      if (macroEditing.photo) photoPut(photoKey(currentId, idx), macroEditing.photo);
+      macroEditing = null;
+      saveState(); render(); return;
+    }
+
     const macroCancelBtn = e.target.closest("[data-macro-cancel]");
     if (macroCancelBtn) { macroEditing = null; render(); return; }
     const macroClearBtn = e.target.closest("[data-macro-clear]");
@@ -1928,6 +2149,8 @@
       const idx = Number(macroClearBtn.getAttribute("data-macro-clear"));
       const st = getRecipeState(currentId);
       delete st.macros[idx];
+      delete tempMacros[currentId + ":" + idx];
+      delete getDefaults()[ingredientKey(byId[currentId].ingredients[idx])];
       photoDel(photoKey(currentId, idx));
       macroEditing = null;
       saveState(); render(); return;
@@ -2176,6 +2399,10 @@
       view = "recipe";
       history.replaceState({ rb: "home" }, "", location.pathname + location.search);
       history.pushState({ rb: "recipe", id: hash }, "", "#" + hash);
+    } else if (hash === "pantry") {
+      view = "pantry";
+      history.replaceState({ rb: "home" }, "", location.pathname + location.search);
+      history.pushState({ rb: "pantry" }, "", "#pantry");
     } else if (hash === "intake") {
       view = "intake";
       history.replaceState({ rb: "home" }, "", location.pathname + location.search);
