@@ -1,4 +1,4 @@
-const CACHE_NAME = "blaze-cookbook-v5";
+const CACHE_NAME = "blaze-cookbook-v6";
 const ASSETS = [
   "./",
   "./index.html",
@@ -30,6 +30,10 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
+
+  // Only ever cache our own files. Food-database lookups must stay live —
+  // cached forever, a product's figures could never be corrected.
+  if (new URL(req.url).origin !== self.location.origin) return;
 
   const isHTML = req.mode === "navigate" || (req.headers.get("accept") || "").includes("text/html");
 

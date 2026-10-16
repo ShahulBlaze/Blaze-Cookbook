@@ -107,6 +107,19 @@
   .rb-macro-btn { flex: none; background: none; border: none; font-size: 15px; line-height: 1; padding: 4px 6px;
     cursor: pointer; opacity: .45; filter: grayscale(1); }
   .rb-macro-btn.is-set { opacity: 1; filter: none; }
+  .rb-scan-btn { display: block; width: 100%; margin: 10px 0 6px; padding: 12px; border: none; border-radius: 10px;
+    background: var(--mustard); color: #211c14; font-family: inherit; font-size: 15px; font-weight: 600; cursor: pointer; }
+  .rb-scan-result { font-size: 12.5px; margin: 6px 0; padding: 8px 10px; border-radius: 8px; background: var(--bg); }
+  .rb-scan-result.is-ok { color: var(--mustard); }
+  .rb-scan-result.is-bad { color: #d79aa2; }
+  .rb-scan { position: fixed; inset: 0; z-index: 90; background: #000; display: flex;
+    flex-direction: column; align-items: center; justify-content: center; }
+  .rb-scan-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .rb-scan-frame { position: relative; width: 74%; max-width: 330px; aspect-ratio: 3 / 2;
+    border: 2px solid rgba(255,255,255,.9); border-radius: 14px; box-shadow: 0 0 0 100vmax rgba(0,0,0,.55); }
+  .rb-scan-msg { position: relative; color: #fff; font-size: 14px; text-align: center; margin: 20px 24px 0; }
+  .rb-scan-actions { position: relative; display: flex; flex-direction: column; gap: 8px; margin-top: 18px; width: 74%; max-width: 330px; }
+  .rb-scan-actions button { background: rgba(255,255,255,.14); color: #fff; }
   .rb-photo-btn { display: block; text-align: center; margin: 10px 0; padding: 11px; border-radius: 10px;
     border: 1px dashed rgba(201,160,74,.5); color: var(--mustard); font-size: 14px; cursor: pointer; }
   .rb-photo-input { display: none; }
@@ -840,6 +853,150 @@
   function saveState() {
     try { localStorage.setItem("blaze-cookbook-state", JSON.stringify(state)); } catch (e) {}
   }
+  // ---- barcode scanning + Open Food Facts -------------------------------
+  // Packaged food carries its own identifier, so reading the barcode beats
+  // reading the label: exact figures, no OCR guesswork. Looked-up products are
+  // cached locally, so a repeat scan of the same tin works with no signal.
+  const OFF_URL = "https://world.openfoodfacts.org/api/v2/product/";
+
+  function getBarcodeCache() {
+    if (!state._barcodes) state._barcodes = {};
+    return state._barcodes;
+  }
+
+  function nutrimentsToMacros(n) {
+    if (!n) return null;
+    const num = v => (typeof v === "number" && isFinite(v) && v >= 0) ? v : null;
+    let kcal = num(n["energy-kcal_100g"]);
+    if (kcal === null) {
+      const kj = num(n["energy_100g"]) ?? num(n["energy-kj_100g"]);
+      if (kj !== null) kcal = kj / 4.184;
+    }
+    const pr = num(n["proteins_100g"]);
+    const cb = num(n["carbohydrates_100g"]);
+    const ft = num(n["fat_100g"]);
+    if (kcal === null && pr === null && cb === null && ft === null) return null;
+    return {
+      kcal: kcal === null ? 0 : Math.round(kcal * 10) / 10,
+      p: pr === null ? 0 : Math.round(pr * 10) / 10,
+      c: cb === null ? 0 : Math.round(cb * 10) / 10,
+      f: ft === null ? 0 : Math.round(ft * 10) / 10
+    };
+  }
+
+  async function lookupBarcode(code) {
+    const cache = getBarcodeCache();
+    if (cache[code]) return cache[code];
+    let res;
+    try {
+      res = await fetch(OFF_URL + encodeURIComponent(code) + ".json?fields=product_name,brands,nutriments",
+        { headers: { "Accept": "application/json" } });
+    } catch (e) {
+      throw new Error("offline");
+    }
+    if (!res.ok) throw new Error("offline");
+    const j = await res.json();
+    const prod = j && j.product;
+    if (!prod || (j.status !== undefined && j.status !== 1 && !prod.nutriments)) throw new Error("notfound");
+    const macros = nutrimentsToMacros(prod.nutriments);
+    if (!macros) throw new Error("nonutrition");
+    const name = [prod.brands, prod.product_name].filter(Boolean).join(" — ") || ("Barcode " + code);
+    const entry = Object.assign({ name: name, code: code }, macros);
+    cache[code] = entry;
+    saveState();
+    return entry;
+  }
+
+  function barcodeSupported() {
+    return typeof window.BarcodeDetector === "function";
+  }
+
+  // Full-screen scanner overlay. It lives outside the re-rendered body so a
+  // render() mid-scan cannot tear the camera down.
+  function openScanner(onCode) {
+    const wrap = document.createElement("div");
+    wrap.className = "rb-scan";
+    wrap.innerHTML =
+      '<video class="rb-scan-video" playsinline muted></video>' +
+      '<div class="rb-scan-frame"></div>' +
+      '<p class="rb-scan-msg">Point the camera at the barcode</p>' +
+      '<div class="rb-scan-actions">' +
+        '<button class="rb-side-cancel rb-scan-type" type="button">Type the number instead</button>' +
+        '<button class="rb-side-cancel rb-scan-close" type="button">Cancel</button>' +
+      '</div>';
+    document.body.appendChild(wrap);
+
+    const video = wrap.querySelector(".rb-scan-video");
+    const msg = wrap.querySelector(".rb-scan-msg");
+    let stream = null, raf = 0, done = false;
+
+    function close() {
+      if (done) return;
+      done = true;
+      if (raf) cancelAnimationFrame(raf);
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      wrap.remove();
+    }
+    function finish(code) {
+      if (done) return;
+      close();
+      onCode(code);
+    }
+
+    wrap.querySelector(".rb-scan-close").addEventListener("click", close);
+    wrap.querySelector(".rb-scan-type").addEventListener("click", () => {
+      const typed = prompt("Barcode number (the digits under the bars):");
+      if (typed && typed.trim()) finish(typed.trim().replace(/\s/g, ""));
+      else close();
+    });
+
+    if (!barcodeSupported()) {
+      msg.textContent = "This browser cannot scan barcodes — type the number instead.";
+      return;
+    }
+
+    const detector = new window.BarcodeDetector({
+      formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39"]
+    });
+
+    // The detect loop must not be gated on play() resolving: under autoplay
+    // policies that promise can reject or never settle, which would leave the
+    // scanner showing a live picture while silently detecting nothing.
+    function startDetecting() {
+      if (done || raf) return;
+      const started = Date.now();
+      const tick = () => {
+        if (done) return;
+        if (Date.now() - started > 25000) {
+          msg.textContent = "Still no barcode — try better light, or type the number.";
+        }
+        detector.detect(video)
+          .then(codes => {
+            if (done) return;
+            if (codes && codes.length && codes[0].rawValue) finish(codes[0].rawValue);
+            else raf = requestAnimationFrame(tick);
+          })
+          .catch(() => { if (!done) raf = requestAnimationFrame(tick); });
+      };
+      raf = requestAnimationFrame(tick);
+    }
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+      .then(st => {
+        if (done) { st.getTracks().forEach(t => t.stop()); return; }
+        stream = st;
+        video.srcObject = st;
+        video.addEventListener("loadedmetadata", startDetecting, { once: true });
+        const p = video.play();
+        if (p && p.catch) p.catch(() => {});
+        startDetecting();
+      })
+      .catch(() => {
+        if (done) return;
+        msg.textContent = "No camera access — type the number instead.";
+      });
+  }
+
   // ---- label photos -----------------------------------------------------
   // Photos live in IndexedDB, not localStorage: a handful of label shots would
   // blow the ~5MB string quota that holds all the rest of the app state.
@@ -1416,14 +1573,16 @@
           </div>`;
       }
       if (row.editIdx !== undefined && macroEditing && macroEditing.id === id && macroEditing.idx === row.editIdx) {
-        const m = st.macros[row.editIdx] || {};
+        const m = macroEditing.scanned || st.macros[row.editIdx] || {};
         const shot = macroEditing.photo || null;
         const key = getNutKey(r.ingredients[row.editIdx]);
         const ref = key && NUT[key] ? NUT[key] : null;
         return `
           <div class="rb-side-input-panel" style="margin:6px 0;">
             <p class="rb-side-picker-label" style="margin:0 0 8px;">${r.ingredients[row.editIdx].n}</p>
-            <p class="rb-log-hint" style="margin-top:0;">Snap the nutrition panel, then type its per-100 g figures below. The photo is kept with the recipe so you can check it later.</p>
+            <p class="rb-log-hint" style="margin-top:0;">Scan the barcode to fill these in automatically, or photograph the label and type them yourself.</p>
+            <button class="rb-scan-btn" data-scan-for="${row.editIdx}" type="button">\u25A5 &nbsp;Scan barcode</button>
+            ${macroEditing.scanMsg ? `<p class="rb-scan-result ${macroEditing.scanOk ? "is-ok" : "is-bad"}">${macroEditing.scanMsg}</p>` : ""}
             ${shot ? `<img class="rb-label-shot" src="${shot}" alt="label">` : ""}
             <label class="rb-photo-btn">
               ${shot ? "Retake photo" : "\uD83D\uDCF7 &nbsp;Take photo of label"}
@@ -1734,6 +1893,34 @@
       });
       return;
     }
+    const scanBtn = e.target.closest("[data-scan-for]");
+    if (scanBtn && currentId && macroEditing) {
+      const target = { id: macroEditing.id, idx: macroEditing.idx };
+      openScanner(code => {
+        if (!macroEditing || macroEditing.id !== target.id || macroEditing.idx !== target.idx) return;
+        macroEditing.scanMsg = "Looking up " + code + "…";
+        macroEditing.scanOk = true;
+        render();
+        lookupBarcode(code).then(entry => {
+          if (!macroEditing || macroEditing.id !== target.id || macroEditing.idx !== target.idx) return;
+          macroEditing.scanned = { kcal: entry.kcal, p: entry.p, c: entry.c, f: entry.f };
+          macroEditing.scanMsg = entry.name + " — check the numbers, then save.";
+          macroEditing.scanOk = true;
+          render();
+        }).catch(err => {
+          if (!macroEditing || macroEditing.id !== target.id || macroEditing.idx !== target.idx) return;
+          const why = err && err.message;
+          macroEditing.scanMsg =
+            why === "notfound" ? "Barcode " + code + " isn't in the food database — type the values from the label."
+            : why === "nonutrition" ? "That product is listed but has no nutrition figures — type them from the label."
+            : "Couldn't reach the food database. Type the values, or try again when you have signal.";
+          macroEditing.scanOk = false;
+          render();
+        });
+      });
+      return;
+    }
+
     const macroCancelBtn = e.target.closest("[data-macro-cancel]");
     if (macroCancelBtn) { macroEditing = null; render(); return; }
     const macroClearBtn = e.target.closest("[data-macro-clear]");
