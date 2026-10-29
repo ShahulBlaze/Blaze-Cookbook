@@ -1,4 +1,4 @@
-const CACHE_NAME = "blaze-cookbook-v11";
+const CACHE_NAME = "blaze-cookbook-v12";
 // Product database shards live in their own cache, so app updates don't throw
 // away barcodes already looked up, and lookups keep working offline in the shop.
 const DATA_CACHE = "blaze-products-v1";

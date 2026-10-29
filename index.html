@@ -151,6 +151,8 @@
   .rb-typecode { display: block; margin: 2px 0 6px; font-size: 12px; }
   .rb-stores { display: block; font-size: 11.5px; color: var(--mustard); margin-top: 3px; }
   .rb-off-add { display: block; margin: 2px 0 8px; font-size: 12px; }
+  .rb-est { display: block; font-size: 11.5px; color: #e8b86a; margin-top: 6px; line-height: 1.4;
+    padding: 6px 8px; border-radius: 6px; background: rgba(227,160,8,.10); }
   .rb-data-note { font-size: 11px; color: var(--muted); opacity: .8; margin: 14px 0 0; line-height: 1.45; }
   .rb-pp-card { margin: 10px 0 2px; padding: 10px 12px; border-radius: 9px; background: var(--bg);
     border: 1px solid rgba(227,160,8,.4); }
@@ -1118,7 +1120,12 @@
           .then(j => { if (!j) delete shardP[prefix]; return j || {}; });
       }
       const rec = (await shardP[prefix])[c];
-      if (rec) return { code: code, name: rec[0], kcal: rec[1], p: rec[2], c: rec[3], f: rec[4], stores: rec[5] || "" };
+      if (rec) {
+        if (rec[1] === null) return { code: code, name: rec[0], stores: rec[5] || "", nameOnly: true };
+        const out = { code: code, name: rec[0], kcal: rec[1], p: rec[2], c: rec[3], f: rec[4], stores: rec[5] || "" };
+        if (rec[6]) { const [cat, n] = String(rec[6]).split("|"); out.estCat = cat; out.estN = Number(n) || 0; }
+        return out;
+      }
     }
     return null;
   }
@@ -1134,6 +1141,9 @@
     return /^\d{8,14}$/.test(String(code || "")) ? `<a class="rb-linkbtn rb-off-add" href="https://world.openfoodfacts.org/product/${code}" target="_blank" rel="noopener">Add it to Open Food Facts, so it's found next time — for everyone</a>` : "";
   }
 
+  // Pantry, then cached answers, then the built-in database. A built-in entry
+  // that only has an estimate or a name is checked against the live service
+  // first, in case real figures were added since the weekly build.
   async function lookupBarcode(code) {
     const mine = getPantry()[code];
     if (mine) return mine;
@@ -1141,7 +1151,21 @@
     const cache = state._offCache;
     if (cache[code]) return cache[code];
     const snap = await snapshotLookup(code);
-    if (snap) { cache[code] = snap; saveState(); return snap; }
+    if (snap && !snap.nameOnly && !snap.estCat) { cache[code] = snap; saveState(); return snap; }
+    let live = null, liveErr = null;
+    try { live = await liveLookup(code); } catch (e) { liveErr = e; }
+    if (live) { cache[code] = live; saveState(); return live; }
+    if (snap && snap.estCat) return snap;           // not cached: retried next time
+    const name = (snap && snap.name) || (liveErr && liveErr.productName);
+    if (snap && snap.nameOnly || (liveErr && liveErr.message === "nonutrition")) {
+      const e = new Error("nonutrition");
+      e.productName = name || "";
+      e.stores = (snap && snap.stores) || "";
+      throw e;
+    }
+    throw liveErr || new Error("notfound");
+  }
+  async function liveLookup(code) {
     let res;
     try {
       res = await fetch(OFF_URL + encodeURIComponent(code) + ".json?fields=product_name,brands,nutriments,nutrition,stores",
@@ -1154,14 +1178,20 @@
     const j = await res.json();
     const prod = j && j.product;
     if (!prod || (j.status !== undefined && j.status !== 1 && !prod.nutriments && !prod.nutrition)) throw new Error("notfound");
+    const name = [prod.brands, prod.product_name].filter(Boolean).join(" \u2014 ") || ("Barcode " + code);
     const macros = nutrimentsToMacros(prod.nutriments) || nutrimentsToMacros(flattenNutrition(prod.nutrition));
-    if (!macros) throw new Error("nonutrition");
-    const name = [prod.brands, prod.product_name].filter(Boolean).join(" — ") || ("Barcode " + code);
+    if (!macros) { const e = new Error("nonutrition"); e.productName = name; throw e; }
     const entry = Object.assign({ name: name, code: code }, macros);
     if (prod.stores) entry.stores = String(prod.stores).split(",").map(x => x.trim()).filter(Boolean).slice(0, 4).join(", ");
-    cache[code] = entry;
-    saveState();
     return entry;
+  }
+  function estimateNote(prod) {
+    if (!prod || !prod.estCat) return "";
+    return `<span class="rb-est">Estimate: this product has no figures on file, so these are the average of ${prod.estN.toLocaleString("en")} labelled ${escHtml(prod.estCat)}. Check the label if you have it.</span>`;
+  }
+  function noFiguresMsg(err) {
+    const n = err && err.productName;
+    return (n ? n + " is" : "That product is") + " listed without nutrition figures \u2014 type them from the label below.";
   }
 
   const BARCODE_FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39"];
@@ -1364,19 +1394,21 @@
           <b>${escHtml(pk.product.name)}</b>
           <span>${macroLine(pk.product)} &nbsp;<i>per 100g</i></span>
           ${storesLine(pk.product)}
+          ${estimateNote(pk.product)}
         </div>` : "";
+    const pf = pk.prefill || {};
     const manual = pk.manual ? `
         <div class="rb-pp-manual">
-          <input type="text" class="rb-add-input rb-pp-name" placeholder="Product name">
+          <input type="text" class="rb-add-input rb-pp-name" placeholder="Product name" value="${escHtml(pf.name || "")}">
           <div class="rb-macro-grid">
-            <label><span>kcal</span><input type="number" min="0" step="any" class="rb-pp-kcal"></label>
-            <label><span>protein</span><input type="number" min="0" step="any" class="rb-pp-p"></label>
-            <label><span>carbs</span><input type="number" min="0" step="any" class="rb-pp-c"></label>
-            <label><span>fat</span><input type="number" min="0" step="any" class="rb-pp-f"></label>
+            <label><span>kcal</span><input type="number" min="0" step="any" class="rb-pp-kcal" value="${pf.kcal != null ? pf.kcal : ""}"></label>
+            <label><span>protein</span><input type="number" min="0" step="any" class="rb-pp-p" value="${pf.p != null ? pf.p : ""}"></label>
+            <label><span>carbs</span><input type="number" min="0" step="any" class="rb-pp-c" value="${pf.c != null ? pf.c : ""}"></label>
+            <label><span>fat</span><input type="number" min="0" step="any" class="rb-pp-f" value="${pf.f != null ? pf.f : ""}"></label>
           </div>
           <p class="rb-log-hint">Per 100 g, as printed on the label.${pk.lastCode ? " Saved under barcode " + escHtml(pk.lastCode) + ", so the next scan finds it." : ""}</p>
         </div>`
-      : `<button class="rb-linkbtn rb-pp-typelink" data-pp-manual="${ctx}" type="button">Not listed? Type it in yourself</button>`;
+      : `<button class="rb-linkbtn rb-pp-typelink" data-pp-manual="${ctx}" type="button">${pk.product ? "Numbers not right? Type the label values" : "Not listed? Type it in yourself"}</button>`;
     return `${scanRow("data-pp-scan", ctx, "data-pp-gallery", ctx, "data-pp-typecode", ctx)}${msg}${sel}${card}${manual}`;
   }
   // The chosen product, or null. Typed entries become pantry-ready products.
@@ -1388,13 +1420,13 @@
     const name = nameEl ? nameEl.value.trim() : "";
     if (!name) return null;
     return {
-      code: pk.lastCode || ("manual:" + slug(name)), name: name,
+      code: pk.lastCode || ("manual:" + slug(name)), name: name, stores: (pk.prefill && pk.prefill.stores) || "",
       kcal: val(".rb-pp-kcal"), p: val(".rb-pp-p"), c: val(".rb-pp-c"), f: val(".rb-pp-f")
     };
   }
   function pickerHandleCode(ctx, code) {
     const pk = picker(ctx);
-    pk.msg = "Looking up " + code + "\u2026"; pk.ok = true; pk.product = null; pk.manual = false; pk.missing = false;
+    pk.msg = "Looking up " + code + "\u2026"; pk.ok = true; pk.product = null; pk.manual = false; pk.missing = false; pk.prefill = null;
     render();
     lookupBarcode(code).then(entry => {
       if (pickers[ctx] !== pk) return;
@@ -1404,8 +1436,9 @@
       if (pickers[ctx] !== pk) return;
       const why = err && err.message;
       pk.msg = why === "notfound" ? "Barcode " + code + " isn't in the food database \u2014 type the label values below."
-        : why === "nonutrition" ? "That product is listed without nutrition figures \u2014 type them below."
+        : why === "nonutrition" ? noFiguresMsg(err)
         : "Couldn't reach the food database. Type the values below, or scan again when you have signal.";
+      pk.prefill = err && err.productName ? { name: err.productName, stores: err.stores } : null;
       pk.ok = false; pk.manual = true; pk.lastCode = code; pk.missing = why === "notfound" || why === "nonutrition";
       render();
     });
@@ -2085,7 +2118,7 @@
               <p class="rb-side-picker-label" style="margin:0 0 8px;">${it.label}</p>
               ${scanRow("data-pscan", 1, "data-pgallery", 1, "data-ptypecode", 1)}
               ${pantryEditing.scanMsg ? `<p class="rb-scan-result ${pantryEditing.scanOk ? "is-ok" : "is-bad"}">${pantryEditing.scanMsg}</p>` : ""}
-              ${pantryEditing.product ? `<p class="rb-scope-name" style="margin:8px 0 2px;">${escHtml(pantryEditing.product.name)}</p>` : ""}
+              ${pantryEditing.product ? `<p class="rb-scope-name" style="margin:8px 0 2px;">${escHtml(pantryEditing.product.name)}</p>` : ""}${pantryEditing.product ? estimateNote(pantryEditing.product) : ""}
               <div class="rb-macro-grid">
                 <label><span>kcal</span><input type="number" min="0" step="any" class="rb-m-kcal" value="${m.kcal !== undefined ? m.kcal : ""}"></label>
                 <label><span>protein</span><input type="number" min="0" step="any" class="rb-m-p" value="${m.p !== undefined ? m.p : ""}"></label>
@@ -2131,7 +2164,7 @@
           </div>`;
       }).join("") + `<p class="rb-log-hint" style="margin-top:16px;">Deleting a product also removes it from the recipes using it, which fall back to the general values.</p>`;
     listHtml += snapInfo
-      ? `<p class="rb-data-note">Barcodes are checked against a built-in copy of ${snapInfo.count.toLocaleString("en")} European products (${(snapInfo.slovakia || 0).toLocaleString("en")} sold in Slovakia), updated ${escHtml(snapInfo.built)}, then live online. Product data \u00A9 Open Food Facts contributors, ODbL.</p>`
+      ? `<p class="rb-data-note">Barcodes are checked against a built-in copy of ${snapInfo.count.toLocaleString("en")} products${snapInfo.with_figures ? ` (${snapInfo.with_figures.toLocaleString("en")} with label figures, ${(snapInfo.estimated || 0).toLocaleString("en")} estimated from similar products)` : ""}, updated ${escHtml(snapInfo.built)}, then live online. Product data \u00A9 Open Food Facts contributors, ODbL.</p>`
       : `<p class="rb-data-note">Barcodes are looked up in Open Food Facts. Product data \u00A9 Open Food Facts contributors, ODbL.</p>`;
     }
 
@@ -2343,6 +2376,7 @@
                 <p class="rb-scope-name">${escHtml(macroEditing.product.name)}</p>
                 <p class="rb-scope-macros">${macroEditing.product.kcal} kcal &nbsp;\u00B7&nbsp; ${macroEditing.product.p}g P &nbsp;\u00B7&nbsp; ${macroEditing.product.c}g C &nbsp;\u00B7&nbsp; ${macroEditing.product.f}g F &nbsp;<i>per 100g</i></p>
                 ${macroEditing.product.stores ? `<p class="rb-scope-macros" style="margin-top:-8px;">${storesLine(macroEditing.product)}</p>` : ""}
+                ${macroEditing.product.estCat ? `<p class="rb-scope-macros">${estimateNote(macroEditing.product)}</p>` : ""}
                 <p class="rb-scope-q">Where should this product apply?</p>
                 <button class="rb-scope-btn" data-scope="everywhere" type="button">
                   <b>Everywhere</b><span>Every recipe using ${ingLabelFor(r, row.editIdx)}, from now on</span>
@@ -2551,7 +2585,7 @@
         const why = err && err.message;
         macroEditing.scanMsg =
           why === "notfound" ? "Barcode " + code + " isn't in the food database — type the values from the label."
-          : why === "nonutrition" ? "That product is listed but has no nutrition figures — type them from the label."
+          : why === "nonutrition" ? noFiguresMsg(err)
           : "Couldn't reach the food database. Type the values, or try again when you have signal.";
         macroEditing.scanOk = false;
         render();
@@ -2574,7 +2608,7 @@
         const why = err && err.message;
         pantryEditing.scanMsg =
           why === "notfound" ? "Barcode " + code + " isn't in the food database \u2014 type the values from the label."
-          : why === "nonutrition" ? "That product is listed but has no nutrition figures \u2014 type them from the label."
+          : why === "nonutrition" ? noFiguresMsg(err)
           : "Couldn't reach the food database. Type the values, or try again when you have signal.";
         pantryEditing.scanOk = false;
         render();
@@ -2711,6 +2745,10 @@
     const ppManual = e.target.closest("[data-pp-manual]");
     if (ppManual) {
       const pk = picker(ppManual.getAttribute("data-pp-manual"));
+      pk.prefill = pk.product ? { name: pk.product.name, stores: pk.product.stores,
+        kcal: pk.product.estCat ? null : pk.product.kcal, p: pk.product.estCat ? null : pk.product.p,
+        c: pk.product.estCat ? null : pk.product.c, f: pk.product.estCat ? null : pk.product.f } : null;
+      if (pk.product && pk.product.code && !pk.lastCode) pk.lastCode = pk.product.code;
       pk.manual = true; pk.product = null; pk.msg = null;
       render(); return;
     }

@@ -6,7 +6,8 @@ product sold in a European country that carries usable per-100g nutrition,
 and writes compact JSON shards keyed by barcode prefix:
 
     OUT/index.json      {"built", "count", "countries", "shards": [prefixes], ...}
-    OUT/<prefix>.json   {"<barcode>": [name, kcal, protein, carbs, fat, stores?]}
+    OUT/<prefix>.json   {"<barcode>": [name, kcal, protein, carbs, fat, stores?, "category|n"?]}
+                        (figures are null for products with neither data nor a usable category)
 
 The phone fetches index.json once and then only the one shard a scanned
 barcode falls in, so the whole of Europe costs a few kilobytes per lookup.
@@ -42,7 +43,6 @@ EUROPE = [
     "estonia", "latvia", "lithuania", "ukraine", "moldova", "belarus", "european-union",
 ]
 EUROPE_TAGS = {"en:" + c for c in EUROPE}
-COUNTRY_RE = re.compile(rb'"en:(?:' + b"|".join(re.escape(c.encode()) for c in EUROPE) + rb')"')
 MAX_SHARD = int(os.environ.get("OFF_MAX_SHARD", "2500"))
 MAX_DEPTH = 11  # deepest prefix length a shard can be keyed on (the app searches 11..3)
 NAME_FIELDS = ["product_name_sk", "product_name_cs", "product_name", "product_name_en",
@@ -178,73 +178,89 @@ def shard(codes, depth, out):
             out.append((prefix, g))
 
 
+def category_label(tag):
+    return re.sub(r"^[a-z]{2}:", "", tag).replace("-", " ")
+
+
 def main(src, out_dir):
     t0 = time.time()
-    recs, by_country, lines, with_stores = {}, Counter(), 0, 0
-    why = Counter()          # what every rejected line failed on
-    seen_country = Counter()  # European products seen at all, before quality filters
-    probe = {"samples": [], "nutri_keys": Counter(), "top_keys": Counter(), "nutriments_type": Counter()}
+    recs = {}            # barcode -> [name, kcal, p, c, f, stores]          (figures from the label)
+    pending = {}         # barcode -> (name, stores, categories)              (no figures on file)
+    cat_sum = {}         # category -> [count, kcal, p, c, f]                 (to estimate the above)
+    by_country, why, lines = Counter(), Counter(), 0
+    local = Counter()    # Slovak/Czech-relevant outcomes, to report coverage honestly
     with open_source(src) as fh:
         for line in fh:
             lines += 1
             if lines % 500000 == 0:
-                print(f"  {lines:,} lines read, {len(recs):,} kept, {time.time() - t0:.0f}s", flush=True)
-            if not COUNTRY_RE.search(line):
-                why["not european (prefilter)"] += 1
-                continue
+                print(f"  {lines:,} lines read, {len(recs):,} with figures, {len(pending):,} without, "
+                      f"{time.time() - t0:.0f}s", flush=True)
             try:
                 p = loads(line)
             except Exception:
                 try:
                     p = json.loads(line)   # orjson is stricter about odd escapes
-                    why["parsed by fallback"] += 1
                 except Exception:
                     why["unparseable"] += 1
                     continue
-            tags = set(p.get("countries_tags") or [])
-            hit = tags & EUROPE_TAGS
-            if not hit:
-                why["not european (tags)"] += 1
-                continue
-            for t in hit:
-                seen_country[t[3:]] += 1
             code = str(p.get("code") or "").strip()
             if not code.isdigit() or not 8 <= len(code) <= 14:
                 why["bad barcode"] += 1
-                continue
-            m = macros(p.get("nutriments")) or macros(flatten_nutrition(p.get("nutrition")))
-            if not m:
-                why["no usable nutrition"] += 1
-                if why["no usable nutrition"] % 997 == 1:   # spread-out sample of what these look like
-                    n = p.get("nutriments")
-                    probe["nutriments_type"][type(n).__name__ + (":empty" if not n else "")] += 1
-                    if isinstance(n, dict):
-                        probe["nutri_keys"].update(k for k in n if "energy" in k or "protein" in k)
-                    probe["top_keys"].update(k for k in p if any(w in k for w in ("nutri", "energy", "nutrition")))
-                    if len(probe["samples"]) < 3 and "en:france" in tags:
-                        probe["samples"].append({
-                            "code": code,
-                            "nutriments": json.dumps(n, ensure_ascii=False)[:220],
-                            "nutrition": json.dumps(p.get("nutrition"), ensure_ascii=False)[:420],
-                        })
                 continue
             name = product_name(p)
             if not name:
                 why["no name"] += 1
                 continue
+            tags = set(p.get("countries_tags") or [])
+            sk = "en:slovakia" in tags or code.startswith("858")
+            cz = "en:czech-republic" in tags or "en:czechia" in tags or code.startswith("859")
+            m = macros(p.get("nutriments")) or macros(flatten_nutrition(p.get("nutrition")))
             st = stores_of(p)
-            rec = [name] + m + ([st] if st else [])
-            prev = recs.get(code)
-            if prev is None or (st and len(prev) < 6):
-                if prev is None:
-                    for t in hit:
-                        by_country[t[3:]] += 1
-                recs[code] = rec
-    with_stores = sum(1 for r in recs.values() if len(r) > 5)
-    if len(recs) < 1000:
-        print("Rejected:", dict(why.most_common()), "probe:", json.dumps({k: (v if k == "samples" else dict(v)) for k, v in probe.items()})[:3000])
-        sys.exit(f"Only {len(recs)} products kept from {lines:,} lines - refusing to publish a broken database.")
+            cats = [c for c in (p.get("categories_tags") or []) if isinstance(c, str)]
+            if m:
+                prev = recs.get(code)
+                if prev is None or (st and len(prev) < 6):
+                    recs[code] = [name] + m + ([st] if st else [])
+                    pending.pop(code, None)
+                    if prev is None:
+                        for t in tags & EUROPE_TAGS:
+                            by_country[t[3:]] += 1
+                        if sk: local["sk with figures"] += 1
+                        if cz: local["cz with figures"] += 1
+                        for c in cats:
+                            a = cat_sum.get(c)
+                            if a is None:
+                                cat_sum[c] = [1] + m
+                            else:
+                                a[0] += 1; a[1] += m[0]; a[2] += m[1]; a[3] += m[2]; a[4] += m[3]
+            elif code not in recs:
+                pending[code] = (name, st, cats)
+                if sk: local["sk without figures"] += 1
+                if cz: local["cz without figures"] += 1
 
+    # Products with no figures: borrow the average of their most specific
+    # category that has enough labelled products to be trustworthy.
+    MIN_N, MAX_N = 20, 40000
+    estimated = name_only = 0
+    for code, (name, st, cats) in pending.items():
+        best = None
+        for c in cats:
+            a = cat_sum.get(c)
+            if a and MIN_N <= a[0] <= MAX_N and (best is None or a[0] <= best[1][0]):  # ties: later tags are more specific
+                best = (c, a)
+        if best:
+            c, a = best
+            n = a[0]
+            est = [round(a[1] / n, 1), round(a[2] / n, 1), round(a[3] / n, 1), round(a[4] / n, 1)]
+            recs[code] = [name] + est + [st, f"{category_label(c)}|{n}"]
+            estimated += 1
+        else:
+            recs[code] = [name, None, None, None, None] + ([st] if st else [])
+            name_only += 1
+    with_figures = len(recs) - estimated - name_only
+    with_stores = sum(1 for r in recs.values() if len(r) > 5 and r[5])
+    if with_figures < 1000:
+        sys.exit(f"Only {with_figures} products with figures from {lines:,} lines - refusing to publish a broken database.")
     pieces = []
     shard(sorted(recs), 3, pieces)
     tmp = out_dir.rstrip("/") + ".tmp"
@@ -257,14 +273,15 @@ def main(src, out_dir):
     index = {
         "built": time.strftime("%Y-%m-%d", time.gmtime()),
         "count": len(recs),
+        "with_figures": with_figures,
+        "estimated": estimated,
+        "name_only": name_only,
         "with_stores": with_stores,
         "countries": {k: top[k] for k in list(top)[:12]},
-        "slovakia": top.get("slovakia", 0),
+        "slovakia": local["sk with figures"],
+        "local": dict(local),
         "lines": lines,
         "rejected": dict(why.most_common()),
-        "seen": dict(seen_country.most_common(15)),
-        "probe": {"samples": probe["samples"], "nutri_keys": dict(probe["nutri_keys"].most_common(12)),
-                  "top_keys": dict(probe["top_keys"].most_common(12)), "nutriments_type": dict(probe["nutriments_type"])},
         "source": "Open Food Facts (openfoodfacts.org), ODbL",
         "shards": [p for p, _ in pieces],
     }
@@ -273,12 +290,10 @@ def main(src, out_dir):
     shutil.rmtree(out_dir, ignore_errors=True)
     os.replace(tmp, out_dir)  # appears only once complete
     size = sum(os.path.getsize(os.path.join(out_dir, x)) for x in os.listdir(out_dir))
-    print(f"Kept {len(recs):,} European products ({with_stores:,} with store names) "
-          f"from {lines:,} lines in {len(pieces):,} shards, {size / 1e6:.1f} MB, {time.time() - t0:.0f}s")
-    print("By country:", ", ".join(f"{k} {v:,}" for k, v in list(top.items())[:15]))
-    print("Rejected:", dict(why.most_common()))
-    print("Seen before filters:", dict(seen_country.most_common(15)))
-
+    print(f"Kept {len(recs):,} products: {with_figures:,} with label figures, {estimated:,} estimated from "
+          f"their category, {name_only:,} name only; {with_stores:,} with store names; {len(pieces):,} shards, "
+          f"{size / 1e6:.1f} MB, {time.time() - t0:.0f}s")
+    print("Slovak/Czech:", dict(local), "| rejected:", dict(why.most_common()))
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:

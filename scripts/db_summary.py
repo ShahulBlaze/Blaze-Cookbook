@@ -1,20 +1,14 @@
 #!/usr/bin/env python3
-"""Report the built product database as a GitHub annotation (readable via the API)."""
+"""Report the built product database as GitHub annotations (readable via the API)."""
 import json, os, sys
 d = sys.argv[1]
 i = json.load(open(os.path.join(d, "index.json")))
 size = sum(os.path.getsize(os.path.join(d, f)) for f in os.listdir(d))
 largest = max(os.path.getsize(os.path.join(d, p + ".json")) for p in i["shards"])
-top = ", ".join(f"{k} {v:,}" for k, v in list(i["countries"].items())[:10])
-print(f"::notice title=Product database::{i['count']:,} European products ({i['slovakia']:,} sold in Slovakia, "
-      f"{i['with_stores']:,} with store names) in {len(i['shards']):,} shards, {size/1e6:.1f} MB, largest shard "
-      f"{largest/1e3:.0f} kB, built {i['built']}. Top countries: {top}")
-if "lines" in i:
-    rej = ", ".join(f"{k} {v:,}" for k, v in i.get("rejected", {}).items())
-    seen = ", ".join(f"{k} {v:,}" for k, v in i.get("seen", {}).items())
-    print(f"::notice title=Product database detail::{i['lines']:,} lines read. Rejected: {rej}. European products seen before quality filters: {seen}")
-if i.get("probe"):
-    pr = i["probe"]
-    print("::notice title=Product database probe A::types " + json.dumps(pr["nutriments_type"]) + " | nutriment keys " + json.dumps(pr["nutri_keys"]) + " | top-level keys " + json.dumps(pr["top_keys"]))
-    for n, smp in enumerate(pr["samples"]):
-        print(f"::notice title=Product database probe S{n}::" + json.dumps(smp, ensure_ascii=False))
+print(f"::notice title=Product database::{i['count']:,} products: {i.get('with_figures', 0):,} with label figures, "
+      f"{i.get('estimated', 0):,} estimated from their category, {i.get('name_only', 0):,} name only; "
+      f"{i['with_stores']:,} with store names; {len(i['shards']):,} shards, {size/1e6:.1f} MB, largest "
+      f"{largest/1e3:.0f} kB; built {i['built']}")
+loc = ", ".join(f"{k} {v:,}" for k, v in i.get("local", {}).items())
+rej = ", ".join(f"{k} {v:,}" for k, v in i.get("rejected", {}).items())
+print(f"::notice title=Product database detail::{i.get('lines', 0):,} lines read. Slovakia/Czechia (tagged or made there): {loc}. Rejected: {rej}")
