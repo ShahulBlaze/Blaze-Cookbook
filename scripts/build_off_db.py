@@ -93,6 +93,16 @@ def product_name(p):
         if p.get(f) and str(p.get(f)).strip():
             name = clean(p.get(f), 80)
             break
+    if not name:  # any other language's name, main language first
+        lc = p.get("lang") or p.get("lc")
+        fields = (["product_name_" + lc] if lc else []) + sorted(k for k in p if k.startswith("product_name_"))
+        for f in fields:
+            v = p.get(f)
+            if isinstance(v, str) and v.strip():
+                name = clean(v, 80)
+                break
+    if not name and isinstance(p.get("generic_name"), str):
+        name = clean(p["generic_name"], 80)
     if not name:
         return ""
     brand = clean(str(p.get("brands") or "").split(",")[0], 40)
@@ -133,29 +143,43 @@ def shard(codes, depth, out):
 def main(src, out_dir):
     t0 = time.time()
     recs, by_country, lines, with_stores = {}, Counter(), 0, 0
+    why = Counter()          # what every rejected line failed on
+    seen_country = Counter()  # European products seen at all, before quality filters
     with open_source(src) as fh:
         for line in fh:
             lines += 1
             if lines % 500000 == 0:
                 print(f"  {lines:,} lines read, {len(recs):,} kept, {time.time() - t0:.0f}s", flush=True)
-            if b"_100g" not in line or not COUNTRY_RE.search(line):
+            if not COUNTRY_RE.search(line):
+                why["not european (prefilter)"] += 1
                 continue
             try:
                 p = loads(line)
             except Exception:
-                continue
+                try:
+                    p = json.loads(line)   # orjson is stricter about odd escapes
+                    why["parsed by fallback"] += 1
+                except Exception:
+                    why["unparseable"] += 1
+                    continue
             tags = set(p.get("countries_tags") or [])
             hit = tags & EUROPE_TAGS
             if not hit:
+                why["not european (tags)"] += 1
                 continue
+            for t in hit:
+                seen_country[t[3:]] += 1
             code = str(p.get("code") or "").strip()
             if not code.isdigit() or not 8 <= len(code) <= 14:
+                why["bad barcode"] += 1
                 continue
             m = macros(p.get("nutriments"))
             if not m:
+                why["no usable nutrition"] += 1
                 continue
             name = product_name(p)
             if not name:
+                why["no name"] += 1
                 continue
             st = stores_of(p)
             rec = [name] + m + ([st] if st else [])
@@ -184,6 +208,9 @@ def main(src, out_dir):
         "with_stores": with_stores,
         "countries": {k: top[k] for k in list(top)[:12]},
         "slovakia": top.get("slovakia", 0),
+        "lines": lines,
+        "rejected": dict(why.most_common()),
+        "seen": dict(seen_country.most_common(15)),
         "source": "Open Food Facts (openfoodfacts.org), ODbL",
         "shards": [p for p, _ in pieces],
     }
@@ -195,6 +222,8 @@ def main(src, out_dir):
     print(f"Kept {len(recs):,} European products ({with_stores:,} with store names) "
           f"from {lines:,} lines in {len(pieces):,} shards, {size / 1e6:.1f} MB, {time.time() - t0:.0f}s")
     print("By country:", ", ".join(f"{k} {v:,}" for k, v in list(top.items())[:15]))
+    print("Rejected:", dict(why.most_common()))
+    print("Seen before filters:", dict(seen_country.most_common(15)))
 
 
 if __name__ == "__main__":

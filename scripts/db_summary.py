@@ -9,3 +9,7 @@ top = ", ".join(f"{k} {v:,}" for k, v in list(i["countries"].items())[:10])
 print(f"::notice title=Product database::{i['count']:,} European products ({i['slovakia']:,} sold in Slovakia, "
       f"{i['with_stores']:,} with store names) in {len(i['shards']):,} shards, {size/1e6:.1f} MB, largest shard "
       f"{largest/1e3:.0f} kB, built {i['built']}. Top countries: {top}")
+if "lines" in i:
+    rej = ", ".join(f"{k} {v:,}" for k, v in i.get("rejected", {}).items())
+    seen = ", ".join(f"{k} {v:,}" for k, v in i.get("seen", {}).items())
+    print(f"::notice title=Product database detail::{i['lines']:,} lines read. Rejected: {rej}. European products seen before quality filters: {seen}")
