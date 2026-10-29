@@ -1030,6 +1030,30 @@
     return prod ? { kcal: prod.kcal, p: prod.p, c: prod.c, f: prod.f } : null;
   }
 
+  // Open Food Facts' newer layout: nutrition.aggregated_set.nutrients.<name>
+  // = {value, unit}, with the old flat `nutriments` left empty. Flatten it.
+  function flattenNutrition(nut) {
+    const agg = nut && nut.aggregated_set;
+    if (!agg || (agg.per !== "100g" && agg.per !== "100ml") || !agg.nutrients) return null;
+    const ns = agg.nutrients;
+    const val = k => {
+      const e = ns[k];
+      if (!e) return null;
+      const v = typeof e.value === "number" ? e.value : (typeof e.value_computed === "number" ? e.value_computed : null);
+      return v === null ? null : { v: v, u: String(e.unit || "").toLowerCase() };
+    };
+    const grams = k => { const x = val(k); return !x ? undefined : x.u === "mg" ? x.v / 1000 : (x.u === "µg" || x.u === "ug" || x.u === "mcg") ? x.v / 1e6 : x.v; };
+    let kcal;
+    for (const k of ["energy-kcal", "energy-kj", "energy"]) {
+      const x = val(k);
+      if (!x) continue;
+      kcal = (x.u === "kcal" || (k === "energy-kcal" && x.u !== "kj")) ? x.v : x.v / 4.184;
+      break;
+    }
+    return { "energy-kcal_100g": kcal, "proteins_100g": grams("proteins"),
+      "carbohydrates_100g": grams("carbohydrates"), "fat_100g": grams("fat") };
+  }
+
   function nutrimentsToMacros(n) {
     if (!n) return null;
     const num = v => (typeof v === "number" && isFinite(v) && v >= 0) ? v : null;
@@ -1120,7 +1144,7 @@
     if (snap) { cache[code] = snap; saveState(); return snap; }
     let res;
     try {
-      res = await fetch(OFF_URL + encodeURIComponent(code) + ".json?fields=product_name,brands,nutriments,stores",
+      res = await fetch(OFF_URL + encodeURIComponent(code) + ".json?fields=product_name,brands,nutriments,nutrition,stores",
         { headers: { "Accept": "application/json" } });
     } catch (e) {
       throw new Error("offline");
@@ -1129,8 +1153,8 @@
     if (!res.ok) throw new Error("offline");
     const j = await res.json();
     const prod = j && j.product;
-    if (!prod || (j.status !== undefined && j.status !== 1 && !prod.nutriments)) throw new Error("notfound");
-    const macros = nutrimentsToMacros(prod.nutriments);
+    if (!prod || (j.status !== undefined && j.status !== 1 && !prod.nutriments && !prod.nutrition)) throw new Error("notfound");
+    const macros = nutrimentsToMacros(prod.nutriments) || nutrimentsToMacros(flattenNutrition(prod.nutrition));
     if (!macros) throw new Error("nonutrition");
     const name = [prod.brands, prod.product_name].filter(Boolean).join(" — ") || ("Barcode " + code);
     const entry = Object.assign({ name: name, code: code }, macros);

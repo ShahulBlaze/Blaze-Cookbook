@@ -82,6 +82,44 @@ def macros(n):
     return [r(kcal), r(vals[0]), r(vals[1]), r(vals[2])]
 
 
+def flatten_nutrition(nut):
+    """Open Food Facts' newer format keeps figures in nutrition.aggregated_set
+    ({"per": "100g", "nutrients": {"proteins": {"value": 8.4, "unit": "g"}, ...}})
+    and leaves the old flat `nutriments` empty. Turn it into the flat shape."""
+    agg = nut.get("aggregated_set") if isinstance(nut, dict) else None
+    if not isinstance(agg, dict) or str(agg.get("per") or "") not in ("100g", "100ml"):
+        return None
+    ns = agg.get("nutrients")
+    if not isinstance(ns, dict):
+        return None
+
+    def val(name):
+        e = ns.get(name)
+        if not isinstance(e, dict):
+            return None, ""
+        v = num(e.get("value"))
+        if v is None:
+            v = num(e.get("value_computed"))
+        return v, str(e.get("unit") or "").lower()
+
+    def grams(name):
+        v, u = val(name)
+        if v is None:
+            return None
+        return v / 1000 if u == "mg" else v / 1e6 if u in ("\u00b5g", "ug", "mcg") else v
+
+    kcal = None
+    for name in ("energy-kcal", "energy-kj", "energy"):
+        v, u = val(name)
+        if v is None:
+            continue
+        kcal = v if (u == "kcal" or (name == "energy-kcal" and u != "kj")) else v / 4.184
+        break
+    out = {"energy-kcal_100g": kcal, "proteins_100g": grams("proteins"),
+           "carbohydrates_100g": grams("carbohydrates"), "fat_100g": grams("fat")}
+    return {k: v for k, v in out.items() if v is not None} or None
+
+
 def clean(s, limit):
     s = re.sub(r"\s+", " ", str(s or "")).strip()
     return s[:limit].rstrip()
@@ -174,7 +212,7 @@ def main(src, out_dir):
             if not code.isdigit() or not 8 <= len(code) <= 14:
                 why["bad barcode"] += 1
                 continue
-            m = macros(p.get("nutriments"))
+            m = macros(p.get("nutriments")) or macros(flatten_nutrition(p.get("nutrition")))
             if not m:
                 why["no usable nutrition"] += 1
                 if why["no usable nutrition"] % 997 == 1:   # spread-out sample of what these look like
