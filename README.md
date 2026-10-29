@@ -15,8 +15,8 @@ Live at: https://shahulblaze.github.io/Blaze-Cookbook/
 - **Create** — build your own recipe from scanned, pantry or general ingredients, with optional steps
 - **Pantry** — every product you've scanned or typed in, plus the list of ingredients the recipes need
 
-Barcodes are looked up in Open Food Facts (free, no key). Cooked weight is estimated from how much
-of the added water simmers off; logging by portion avoids weighing altogether.
+Barcodes can be scanned live or read from a gallery photo, and are looked up in Open Food Facts (free, no key).
+Per-100 g uses raw ingredient weight; logging by portion of the batch avoids weighing altogether.
 
 ## Files
 - `index.html` — the app (recipes, servings scaler, nutrition engine, checklists)

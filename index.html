@@ -143,6 +143,12 @@
   .rb-two-btns .rb-ate-btn { flex: 1; }
   .rb-ate-alt { background: var(--surface) !important; color: var(--mustard) !important; border: 1px solid rgba(227,160,8,.45) !important; }
   .rb-pp-select { margin-top: 8px; }
+  .rb-scan-row { display: flex; gap: 8px; }
+  .rb-scan-row .rb-scan-btn { flex: 1; margin-bottom: 4px; }
+  .rb-gallery-btn { display: flex; align-items: center; justify-content: center; text-align: center;
+    background: var(--surface-2) !important; color: var(--mustard) !important; border: 1px solid rgba(227,160,8,.45) !important; }
+  .rb-gallery-input { display: none; }
+  .rb-typecode { display: block; margin: 2px 0 6px; font-size: 12px; }
   .rb-pp-card { margin: 10px 0 2px; padding: 10px 12px; border-radius: 9px; background: var(--bg);
     border: 1px solid rgba(227,160,8,.4); }
   .rb-pp-card b { display: block; font-size: 14px; font-weight: 600; margin-bottom: 3px; }
@@ -1068,6 +1074,65 @@
     return entry;
   }
 
+  const BARCODE_FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39"];
+
+  // Read a barcode out of a saved photo. Gallery shots are often huge or taken
+  // sideways, so a smaller copy and a quarter turn are tried before giving up.
+  async function decodeBarcodeFromFile(file) {
+    if (!barcodeSupported()) throw new Error("unsupported");
+    const detector = new window.BarcodeDetector({ formats: BARCODE_FORMATS });
+    let bmp;
+    try { bmp = await createImageBitmap(file); } catch (e) { throw new Error("badimage"); }
+    const sources = [bmp];
+    const big = Math.max(bmp.width, bmp.height);
+    for (const target of [1600, 900]) {
+      if (big > target) {
+        const k = target / big;
+        try {
+          sources.push(await createImageBitmap(bmp, {
+            resizeWidth: Math.round(bmp.width * k), resizeHeight: Math.round(bmp.height * k), resizeQuality: "high" }));
+        } catch (e) {}
+      }
+    }
+    const turned = src => {
+      const cv = document.createElement("canvas");
+      cv.width = src.height; cv.height = src.width;
+      const g = cv.getContext("2d");
+      g.translate(cv.width / 2, cv.height / 2); g.rotate(Math.PI / 2);
+      g.drawImage(src, -src.width / 2, -src.height / 2);
+      return cv;
+    };
+    for (const src of sources) {
+      for (const img of [src, turned(src)]) {
+        let codes = [];
+        try { codes = await detector.detect(img); } catch (e) {}
+        if (codes && codes.length && codes[0].rawValue) return codes[0].rawValue;
+      }
+    }
+    throw new Error("nocode");
+  }
+  function galleryErrorText(err) {
+    const why = err && err.message;
+    if (why === "unsupported") return "This browser can't read barcodes from pictures \u2014 type the number printed under the bars instead.";
+    if (why === "badimage") return "Couldn't open that picture. Try another one.";
+    return "No barcode found in that picture. A sharper, closer photo of the bars works best \u2014 or type the number printed under them.";
+  }
+  function galleryInput(attr, val) {
+    return `<label class="rb-scan-btn rb-gallery-btn">\uD83D\uDDBC &nbsp;From gallery
+        <input type="file" accept="image/*" class="rb-gallery-input" ${attr}="${val}"></label>`;
+  }
+  function scanRow(scanAttr, scanVal, galAttr, galVal, typeAttr, typeVal) {
+    return `<div class="rb-scan-row">
+        <button class="rb-scan-btn" ${scanAttr}="${scanVal}" type="button">\u25A5 &nbsp;Scan</button>
+        ${galleryInput(galAttr, galVal)}
+      </div>
+      <button class="rb-linkbtn rb-typecode" ${typeAttr}="${typeVal}" type="button">Type the barcode number instead</button>`;
+  }
+  function askBarcodeNumber() {
+    const v = prompt("Barcode number (the digits under the bars):");
+    return v && v.replace(/\s/g, "") ? v.replace(/\s/g, "") : null;
+  }
+
   function barcodeSupported() {
     return typeof window.BarcodeDetector === "function";
   }
@@ -1116,9 +1181,7 @@
       return;
     }
 
-    const detector = new window.BarcodeDetector({
-      formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39"]
-    });
+    const detector = new window.BarcodeDetector({ formats: BARCODE_FORMATS });
 
     // The detect loop must not be gated on play() resolving: under autoplay
     // policies that promise can reject or never settle, which would leave the
@@ -1223,7 +1286,7 @@
           <p class="rb-log-hint">Per 100 g, as printed on the label.${pk.lastCode ? " Saved under barcode " + escHtml(pk.lastCode) + ", so the next scan finds it." : ""}</p>
         </div>`
       : `<button class="rb-linkbtn rb-pp-typelink" data-pp-manual="${ctx}" type="button">Not listed? Type it in yourself</button>`;
-    return `<button class="rb-scan-btn" data-pp-scan="${ctx}" type="button">▥ &nbsp;Scan barcode</button>${msg}${sel}${card}${manual}`;
+    return `${scanRow("data-pp-scan", ctx, "data-pp-gallery", ctx, "data-pp-typecode", ctx)}${msg}${sel}${card}${manual}`;
   }
   // The chosen product, or null. Typed entries become pantry-ready products.
   function pickerResult(ctx) {
@@ -1238,26 +1301,35 @@
       kcal: val(".rb-pp-kcal"), p: val(".rb-pp-p"), c: val(".rb-pp-c"), f: val(".rb-pp-f")
     };
   }
+  function pickerHandleCode(ctx, code) {
+    const pk = picker(ctx);
+    pk.msg = "Looking up " + code + "\u2026"; pk.ok = true; pk.product = null; pk.manual = false;
+    render();
+    lookupBarcode(code).then(entry => {
+      if (pickers[ctx] !== pk) return;
+      pk.product = entry; pk.msg = null; pk.lastCode = code;
+      render();
+    }).catch(err => {
+      if (pickers[ctx] !== pk) return;
+      const why = err && err.message;
+      pk.msg = why === "notfound" ? "Barcode " + code + " isn't in the food database \u2014 type the label values below."
+        : why === "nonutrition" ? "That product is listed without nutrition figures \u2014 type them below."
+        : "Couldn't reach the food database. Type the values below, or scan again when you have signal.";
+      pk.ok = false; pk.manual = true; pk.lastCode = code;
+      render();
+    });
+  }
   function pickerScan(ctx) {
     const pk = picker(ctx);
-    openScanner(code => {
-      if (pickers[ctx] !== pk) return;
-      pk.msg = "Looking up " + code + "…"; pk.ok = true; pk.product = null; pk.manual = false;
-      render();
-      lookupBarcode(code).then(entry => {
-        if (pickers[ctx] !== pk) return;
-        pk.product = entry; pk.msg = null; pk.lastCode = code;
-        render();
-      }).catch(err => {
-        if (pickers[ctx] !== pk) return;
-        const why = err && err.message;
-        pk.msg = why === "notfound" ? "Barcode " + code + " isn't in the food database — type the label values below."
-          : why === "nonutrition" ? "That product is listed without nutrition figures — type them below."
-          : "Couldn't reach the food database. Type the values below, or scan again when you have signal.";
-        pk.ok = false; pk.manual = true; pk.lastCode = code;
-        render();
-      });
-    });
+    openScanner(code => { if (pickers[ctx] === pk) pickerHandleCode(ctx, code); });
+  }
+  function pickerGallery(ctx, file) {
+    const pk = picker(ctx);
+    pk.msg = "Reading the barcode from your picture\u2026"; pk.ok = true;
+    render();
+    decodeBarcodeFromFile(file)
+      .then(code => { if (pickers[ctx] === pk) pickerHandleCode(ctx, code); })
+      .catch(err => { if (pickers[ctx] !== pk) return; pk.msg = galleryErrorText(err); pk.ok = false; render(); });
   }
   function pickerSelect(ctx, value) {
     const pk = picker(ctx);
@@ -1306,25 +1378,6 @@
     return own ? macrosOf(own) : { kcal: it.kcal, p: it.p, c: it.c, f: it.f };
   }
 
-  // ---- cooked weight without weighing the pot ---------------------------
-  // Most of the added water in a simmered dish boils off, except what grains
-  // and pulses soak up. This estimate replaces raw weight for per-100g; logging
-  // by portion of the batch avoids weight altogether and is exact.
-  const EVAP_SHARE = 0.5;
-  const ABSORBERS = { rice_dry: 2.0, pasta_dry: 1.5, lentils_dry: 2.2, beans_dry: 2.2, couscous_dry: 1.3, semolina_dry: 2.0 };
-  function batchWeights(r, scale) {
-    let raw = 0, water = 0, absorb = 0;
-    effectiveIngredients(r).forEach(ing => {
-      if (ing.a === null) return;
-      const g = trueGrams(ing, ing.a * scale);
-      raw += g;
-      const k = getNutKey(ing);
-      if (k === "water") water += g;
-      if (ABSORBERS[k]) absorb += g * ABSORBERS[k];
-    });
-    const free = Math.max(0, water - absorb);
-    return { raw: raw, est: raw - free * EVAP_SHARE, evaporated: free * EVAP_SHARE };
-  }
 
   // ---- label photos -----------------------------------------------------
   // Photos live in IndexedDB, not localStorage: a handful of label shots would
@@ -1433,9 +1486,7 @@
   // — if one has been recorded, it wins.
   function effectiveWeight(r, scale, rawTotalG) {
     const st = getRecipeState(r.id);
-    if (st.cookedG) return st.cookedG * scale;
-    const w = batchWeights(r, scale).est;
-    return w > 0 ? w : rawTotalG;
+    return st.cookedG ? st.cookedG * scale : rawTotalG;
   }
   // per-100g profile of a recipe as it is currently configured (edits included)
   function recipePer100(r) {
@@ -1941,7 +1992,7 @@
           return `
             <div class="rb-side-input-panel" style="margin:8px 0;">
               <p class="rb-side-picker-label" style="margin:0 0 8px;">${it.label}</p>
-              <button class="rb-scan-btn" data-pscan="1" type="button">\u25A5 &nbsp;Scan barcode</button>
+              ${scanRow("data-pscan", 1, "data-pgallery", 1, "data-ptypecode", 1)}
               ${pantryEditing.scanMsg ? `<p class="rb-scan-result ${pantryEditing.scanOk ? "is-ok" : "is-bad"}">${pantryEditing.scanMsg}</p>` : ""}
               ${pantryEditing.product ? `<p class="rb-scope-name" style="margin:8px 0 2px;">${escHtml(pantryEditing.product.name)}</p>` : ""}
               <div class="rb-macro-grid">
@@ -2008,13 +2059,11 @@
     headerTitle.textContent = d.editId ? "Edit your recipe" : "Create a recipe";
     headerSub.textContent = "Scan or pick each ingredient, weigh it in — the macros build as you go.";
 
-    let tot = { g: 0, kcal: 0, p: 0, c: 0, f: 0 }, water = 0, absorb = 0;
+    let tot = { g: 0, kcal: 0, p: 0, c: 0, f: 0 };
     const rows = d.items.map((it, i) => {
       const m = itemMacros(it);
       const k = it.g / 100;
       tot.g += it.g; tot.kcal += m.kcal * k; tot.p += m.p * k; tot.c += m.c * k; tot.f += m.f * k;
-      if (it.nutKey === "water") water += it.g;
-      if (ABSORBERS[it.nutKey]) absorb += it.g * ABSORBERS[it.nutKey];
       return `
         <div class="rb-b-row">
           <div class="rb-b-main">
@@ -2025,8 +2074,7 @@
           <button class="rb-custom-remove" data-bdel="${i}" type="button" aria-label="Remove">×</button>
         </div>`;
     }).join("");
-    const est = tot.g - Math.max(0, water - absorb) * EVAP_SHARE;
-    const per = est > 0 ? { kcal: tot.kcal / est * 100, p: tot.p / est * 100, c: tot.c / est * 100, f: tot.f / est * 100 } : null;
+    const per = tot.g > 0 ? { kcal: tot.kcal / tot.g * 100, p: tot.p / tot.g * 100, c: tot.c / tot.g * 100, f: tot.f / tot.g * 100 } : null;
 
     const addHtml = builderAdding ? `
       <div class="rb-side-input-panel">
@@ -2058,7 +2106,7 @@
           <div><b>${Math.round(tot.kcal)}</b> kcal</div><div><b>${fmt1(tot.p)}</b>g protein</div>
           <div><b>${fmt1(tot.c)}</b>g carbs</div><div><b>${fmt1(tot.f)}</b>g fat</div>
         </div>
-        <p class="rb-weigh-line">Whole batch, ${Math.round(tot.g)}g of ingredients${per ? ` &nbsp;·&nbsp; about ${Math.round(per.kcal)} kcal and ${fmt1(per.p)}g protein per 100g cooked` : ""}</p>` : ""}
+        <p class="rb-weigh-line">Whole batch, ${Math.round(tot.g)}g of ingredients${per ? ` &nbsp;·&nbsp; ${Math.round(per.kcal)} kcal and ${fmt1(per.p)}g protein per 100g` : ""}</p>` : ""}
       ${addHtml}
 
       <h3 class="rb-section-label" style="margin-top:22px;">How to cook it <i class="rb-optional">optional</i></h3>
@@ -2145,7 +2193,6 @@
       : "\u2014";
 
     const dishG = effectiveWeight(r, scale, main.totalG);
-    const bw = batchWeights(r, scale);
     const per100 = dishG > 0 ? {
       kcal: main.kcal / dishG * 100, p: main.p / dishG * 100,
       c: main.c / dishG * 100, f: main.f / dishG * 100
@@ -2194,7 +2241,7 @@
               const where = { everywhere: "in every recipe", recipe: "in this recipe", once: "for this cook only" }[cur.source];
               return `<p class="rb-scan-result is-ok" style="margin-top:0;">Now using <b>${cur.prod && cur.prod.name ? escHtml(cur.prod.name) : "your own values"}</b> ${where}.</p>`;
             })()}
-            <button class="rb-scan-btn" data-scan-for="${row.editIdx}" type="button">\u25A5 &nbsp;Scan barcode</button>
+            ${scanRow("data-scan-for", row.editIdx, "data-gallery-for", row.editIdx, "data-typecode-for", row.editIdx)}
             ${macroEditing.scanMsg ? `<p class="rb-scan-result ${macroEditing.scanOk ? "is-ok" : "is-bad"}">${macroEditing.scanMsg}</p>` : ""}
             ${macroEditing.product ? `
               <div class="rb-scope">
@@ -2311,7 +2358,7 @@
               <input type="number" min="0" step="any" class="rb-log-grams" placeholder="grams on your plate">
               <span>g</span>
             </div>
-            <p class="rb-log-hint">At ${Math.round(per100.kcal)} kcal / 100 g. One whole batch is about ${Math.round(dishG)}g.</p>`}
+            <p class="rb-log-hint">At ${Math.round(per100.kcal)} kcal / 100 g. One whole batch is ${Math.round(dishG)}g.</p>`}
           <button class="rb-side-portion-btn" data-log-save="${r.id}" type="button">Log it</button>
           <button class="rb-side-cancel" data-log-cancel="1" type="button">Cancel</button>
         </div>`
@@ -2324,16 +2371,14 @@
             <input type="number" min="0" step="any" class="rb-cooked-input" value="${st.cookedG ? Math.round(st.cookedG * scale) : ""}" placeholder="grams">
             <span>g</span>
           </div>
-          <p class="rb-log-hint">No need to lift the pot: put each storage box on the scale, press tare, fill it, and add the readings up. Raw ingredients come to ${Math.round(main.totalG)}g; the current estimate is ${Math.round(bw.est)}g.</p>
+          <p class="rb-log-hint">No need to lift the pot: put each storage box on the scale, press tare, fill it, and add the readings up. Raw ingredients come to ${Math.round(main.totalG)}g.</p>
           <button class="rb-side-portion-btn" data-cooked-save="${r.id}" type="button">Save</button>
           ${st.cookedG ? `<button class="rb-side-cancel" data-cooked-clear="${r.id}" type="button">Use raw weight instead</button>` : ""}
           <button class="rb-side-cancel" data-cooked-cancel="1" type="button">Cancel</button>
         </div>`
       : `<p class="rb-weigh-line">${st.cookedG
           ? `Using your weighed cooked batch. <button class="rb-linkbtn" data-cooked-edit="${r.id}" type="button">Change</button>`
-          : (bw.evaporated > 1
-            ? `Cooked weight estimated — about ${Math.round(bw.evaporated)}g of the added water simmers off. Logging by portion needs no weight at all. <button class="rb-linkbtn" data-cooked-edit="${r.id}" type="button">Weighed it?</button>`
-            : `Based on ingredient weight. <button class="rb-linkbtn" data-cooked-edit="${r.id}" type="button">Weighed it after cooking?</button>`)}</p>`}
+          : `Based on raw ingredient weight. Logging by portion of the batch needs no weight at all. <button class="rb-linkbtn" data-cooked-edit="${r.id}" type="button">Weighed it?</button>`}</p>`}
       ${hasSide ? `<p class="rb-combined-line">Meal total incl. side: ${Math.round(combined.totalG)}g &nbsp;\u00B7&nbsp; ${Math.round(combined.kcal)} kcal &nbsp;\u00B7&nbsp; ${Math.round(combined.p)}g protein &nbsp;\u00B7&nbsp; ${Math.round(combined.c)}g carbs &nbsp;\u00B7&nbsp; ${Math.round(combined.f)}g fat</p>` : `<div style="margin-bottom:18px;"></div>`}
 
       <div class="rb-servings-row">
@@ -2391,6 +2436,53 @@
       ${r.steps.length ? `<h3 class="rb-section-label" style="margin-top:22px;">Method</h3>
       ${stepsHtml}` : ""}
     `;
+  }
+
+  function macroCodeFound(target, code) {
+    if (!macroEditing || macroEditing.id !== target.id || macroEditing.idx !== target.idx) return;
+      macroEditing.scanMsg = "Looking up " + code + "…";
+      macroEditing.scanOk = true;
+      render();
+      lookupBarcode(code).then(entry => {
+        if (!macroEditing || macroEditing.id !== target.id || macroEditing.idx !== target.idx) return;
+        macroEditing.scanned = { kcal: entry.kcal, p: entry.p, c: entry.c, f: entry.f };
+        macroEditing.product = entry;
+        macroEditing.scanMsg = null;
+        macroEditing.scanOk = true;
+        render();
+      }).catch(err => {
+        if (!macroEditing || macroEditing.id !== target.id || macroEditing.idx !== target.idx) return;
+        const why = err && err.message;
+        macroEditing.scanMsg =
+          why === "notfound" ? "Barcode " + code + " isn't in the food database — type the values from the label."
+          : why === "nonutrition" ? "That product is listed but has no nutrition figures — type them from the label."
+          : "Couldn't reach the food database. Type the values, or try again when you have signal.";
+        macroEditing.scanOk = false;
+        render();
+      });
+  }
+
+  function needCodeFound(key, code) {
+    if (!pantryEditing || pantryEditing.key !== key) return;
+      pantryEditing.scanMsg = "Looking up " + code + "\u2026";
+      pantryEditing.scanOk = true;
+      render();
+      lookupBarcode(code).then(entry => {
+        if (!pantryEditing || pantryEditing.key !== key) return;
+        pantryEditing.product = entry;
+        pantryEditing.scanned = { kcal: entry.kcal, p: entry.p, c: entry.c, f: entry.f };
+        pantryEditing.scanMsg = null;
+        render();
+      }).catch(err => {
+        if (!pantryEditing || pantryEditing.key !== key) return;
+        const why = err && err.message;
+        pantryEditing.scanMsg =
+          why === "notfound" ? "Barcode " + code + " isn't in the food database \u2014 type the values from the label."
+          : why === "nonutrition" ? "That product is listed but has no nutrition figures \u2014 type them from the label."
+          : "Couldn't reach the food database. Type the values, or try again when you have signal.";
+        pantryEditing.scanOk = false;
+        render();
+      });
   }
 
   function r_byId(id) { return byId[id]; }
@@ -2513,6 +2605,12 @@
     // shared product picker
     const ppScan = e.target.closest("[data-pp-scan]");
     if (ppScan) { pickerScan(ppScan.getAttribute("data-pp-scan")); return; }
+    const ppType = e.target.closest("[data-pp-typecode]");
+    if (ppType) {
+      const code = askBarcodeNumber();
+      if (code) pickerHandleCode(ppType.getAttribute("data-pp-typecode"), code);
+      return;
+    }
     const ppManual = e.target.closest("[data-pp-manual]");
     if (ppManual) {
       const pk = picker(ppManual.getAttribute("data-pp-manual"));
@@ -2652,28 +2750,13 @@
     const pScanBtn = e.target.closest("[data-pscan]");
     if (pScanBtn && pantryEditing) {
       const key = pantryEditing.key;
-      openScanner(code => {
-        if (!pantryEditing || pantryEditing.key !== key) return;
-        pantryEditing.scanMsg = "Looking up " + code + "\u2026";
-        pantryEditing.scanOk = true;
-        render();
-        lookupBarcode(code).then(entry => {
-          if (!pantryEditing || pantryEditing.key !== key) return;
-          pantryEditing.product = entry;
-          pantryEditing.scanned = { kcal: entry.kcal, p: entry.p, c: entry.c, f: entry.f };
-          pantryEditing.scanMsg = null;
-          render();
-        }).catch(err => {
-          if (!pantryEditing || pantryEditing.key !== key) return;
-          const why = err && err.message;
-          pantryEditing.scanMsg =
-            why === "notfound" ? "Barcode " + code + " isn't in the food database \u2014 type the values from the label."
-            : why === "nonutrition" ? "That product is listed but has no nutrition figures \u2014 type them from the label."
-            : "Couldn't reach the food database. Type the values, or try again when you have signal.";
-          pantryEditing.scanOk = false;
-          render();
-        });
-      });
+      openScanner(code => needCodeFound(key, code));
+      return;
+    }
+    const pTypeBtn = e.target.closest("[data-ptypecode]");
+    if (pTypeBtn && pantryEditing) {
+      const code = askBarcodeNumber();
+      if (code) needCodeFound(pantryEditing.key, code);
       return;
     }
 
@@ -2795,29 +2878,13 @@
     const scanBtn = e.target.closest("[data-scan-for]");
     if (scanBtn && currentId && macroEditing) {
       const target = { id: macroEditing.id, idx: macroEditing.idx };
-      openScanner(code => {
-        if (!macroEditing || macroEditing.id !== target.id || macroEditing.idx !== target.idx) return;
-        macroEditing.scanMsg = "Looking up " + code + "…";
-        macroEditing.scanOk = true;
-        render();
-        lookupBarcode(code).then(entry => {
-          if (!macroEditing || macroEditing.id !== target.id || macroEditing.idx !== target.idx) return;
-          macroEditing.scanned = { kcal: entry.kcal, p: entry.p, c: entry.c, f: entry.f };
-          macroEditing.product = entry;
-          macroEditing.scanMsg = null;
-          macroEditing.scanOk = true;
-          render();
-        }).catch(err => {
-          if (!macroEditing || macroEditing.id !== target.id || macroEditing.idx !== target.idx) return;
-          const why = err && err.message;
-          macroEditing.scanMsg =
-            why === "notfound" ? "Barcode " + code + " isn't in the food database — type the values from the label."
-            : why === "nonutrition" ? "That product is listed but has no nutrition figures — type them from the label."
-            : "Couldn't reach the food database. Type the values, or try again when you have signal.";
-          macroEditing.scanOk = false;
-          render();
-        });
-      });
+      openScanner(code => macroCodeFound(target, code));
+      return;
+    }
+    const typeForBtn = e.target.closest("[data-typecode-for]");
+    if (typeForBtn && currentId && macroEditing) {
+      const code = askBarcodeNumber();
+      if (code) macroCodeFound({ id: macroEditing.id, idx: macroEditing.idx }, code);
       return;
     }
 
@@ -3087,6 +3154,32 @@
   });
 
   root.addEventListener("change", (e) => {
+    if (e.target.classList.contains("rb-gallery-input")) {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if (!file) return;
+      const el = e.target;
+      if (el.hasAttribute("data-pp-gallery")) { pickerGallery(el.getAttribute("data-pp-gallery"), file); return; }
+      if (el.hasAttribute("data-gallery-for") && macroEditing) {
+        const target = { id: macroEditing.id, idx: macroEditing.idx };
+        macroEditing.scanMsg = "Reading the barcode from your picture\u2026"; macroEditing.scanOk = true; render();
+        decodeBarcodeFromFile(file).then(code => macroCodeFound(target, code)).catch(err => {
+          if (!macroEditing || macroEditing.id !== target.id || macroEditing.idx !== target.idx) return;
+          macroEditing.scanMsg = galleryErrorText(err); macroEditing.scanOk = false; render();
+        });
+        return;
+      }
+      if (el.hasAttribute("data-pgallery") && pantryEditing) {
+        const key = pantryEditing.key;
+        pantryEditing.scanMsg = "Reading the barcode from your picture\u2026"; pantryEditing.scanOk = true; render();
+        decodeBarcodeFromFile(file).then(code => needCodeFound(key, code)).catch(err => {
+          if (!pantryEditing || pantryEditing.key !== key) return;
+          pantryEditing.scanMsg = galleryErrorText(err); pantryEditing.scanOk = false; render();
+        });
+        return;
+      }
+      return;
+    }
     if (e.target.matches("[data-pp-select]")) {
       pickerSelect(e.target.getAttribute("data-pp-select"), e.target.value);
       render(); return;
