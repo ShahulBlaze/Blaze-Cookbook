@@ -70,7 +70,7 @@ jobs:
           if [ -f offdb/index.json ]; then
             mkdir -p _site/data
             cp -r offdb _site/data/off
-            python3 -c "import json; i=json.load(open('offdb/index.json')); print('Product database:', i['count'], 'products,', i['slovakia'], 'in Slovakia, built', i['built'])"
+            python3 scripts/db_summary.py offdb
           else
             echo "::warning::No product database this run; the app will use live lookups only."
           fi
