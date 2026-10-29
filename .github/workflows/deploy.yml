@@ -4,6 +4,14 @@ on:
   push:
     branches: ["main"]
   workflow_dispatch:
+    inputs:
+      rebuild_products:
+        description: "Rebuild the product database even if this week's copy is cached"
+        type: boolean
+        default: false
+  schedule:
+    # Mondays 03:17 UTC: pick up new and corrected products from Open Food Facts
+    - cron: "17 3 * * 1"
 
 permissions:
   contents: read
@@ -20,17 +28,63 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Week stamp
+        id: week
+        run: echo "w=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+
+      # The full export is ~7 GB, so build once a week and reuse the result
+      # for every code push in between.
+      - name: Restore product database
+        id: offcache
+        if: ${{ !inputs.rebuild_products }}
+        uses: actions/cache/restore@v4
+        with:
+          path: offdb
+          key: offdb-${{ steps.week.outputs.w }}-${{ hashFiles('scripts/build_off_db.py') }}
+
+      - name: Build product database from Open Food Facts
+        id: build
+        if: steps.offcache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        run: |
+          pip install --quiet orjson
+          python3 scripts/build_off_db.py https://static.openfoodfacts.org/data/openfoodfacts-products.jsonl.gz offdb
+
+      - name: Save product database
+        if: steps.offcache.outputs.cache-hit != 'true' && steps.build.outcome == 'success'
+        uses: actions/cache/save@v4
+        with:
+          path: offdb
+          key: offdb-${{ steps.week.outputs.w }}-${{ hashFiles('scripts/build_off_db.py') }}
+
+      # If the build failed, the app still deploys and falls back to live lookups.
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          git ls-files -z | grep -zv -e '^\.github/' -e '^scripts/' | xargs -0 cp --parents -t _site
+          if [ -f offdb/index.json ]; then
+            mkdir -p _site/data
+            cp -r offdb _site/data/off
+            python3 -c "import json; i=json.load(open('offdb/index.json')); print('Product database:', i['count'], 'products,', i['slovakia'], 'in Slovakia, built', i['built'])"
+          else
+            echo "::warning::No product database this run; the app will use live lookups only."
+          fi
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
           enablement: true
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "."
+          path: "_site"
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

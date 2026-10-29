@@ -149,6 +149,9 @@
     background: var(--surface-2) !important; color: var(--mustard) !important; border: 1px solid rgba(227,160,8,.45) !important; }
   .rb-gallery-input { display: none; }
   .rb-typecode { display: block; margin: 2px 0 6px; font-size: 12px; }
+  .rb-stores { display: block; font-size: 11.5px; color: var(--mustard); margin-top: 3px; }
+  .rb-off-add { display: block; margin: 2px 0 8px; font-size: 12px; }
+  .rb-data-note { font-size: 11px; color: var(--muted); opacity: .8; margin: 14px 0 0; line-height: 1.45; }
   .rb-pp-card { margin: 10px 0 2px; padding: 10px 12px; border-radius: 9px; background: var(--bg);
     border: 1px solid rgba(227,160,8,.4); }
   .rb-pp-card b { display: block; font-size: 14px; font-weight: 600; margin-bottom: 3px; }
@@ -1047,15 +1050,77 @@
     };
   }
 
+  // ---- built-in European product database --------------------------------
+  // A weekly snapshot of every European product in Open Food Facts that has
+  // nutrition figures, built on GitHub and published next to the app as small
+  // shards keyed by barcode prefix. A lookup fetches the index once and then
+  // only the one shard it needs; the service worker keeps both for offline use.
+  const SNAP_BASE = "data/off/";
+  let snapIndexP = null, snapInfo = null;
+  function snapshotIndex() {
+    if (!snapIndexP) {
+      snapIndexP = fetch(SNAP_BASE + "index.json")
+        .then(r => r.ok ? r.json() : null)
+        .catch(() => null)
+        .then(j => {
+          if (!j || !Array.isArray(j.shards)) { snapIndexP = null; return null; }
+          j._set = new Set(j.shards);
+          snapInfo = j;
+          return j;
+        });
+    }
+    return snapIndexP;
+  }
+  const shardP = {};
+  function codeVariants(code) {
+    const v = [code];
+    if (/^\d{12}$/.test(code)) v.push("0" + code);       // UPC-A read as EAN-13
+    if (/^0\d{12}$/.test(code)) v.push(code.slice(1));
+    return v;
+  }
+  async function snapshotLookup(code) {
+    const idx = await snapshotIndex();
+    if (!idx) return null;
+    for (const c of codeVariants(code)) {
+      let prefix = null;
+      for (let L = Math.min(c.length, 11); L >= 3; L--) {
+        if (idx._set.has(c.slice(0, L))) { prefix = c.slice(0, L); break; }
+      }
+      if (!prefix) continue;
+      if (!shardP[prefix]) {
+        shardP[prefix] = fetch(SNAP_BASE + prefix + ".json")
+          .then(r => r.ok ? r.json() : null)
+          .catch(() => null)
+          .then(j => { if (!j) delete shardP[prefix]; return j || {}; });
+      }
+      const rec = (await shardP[prefix])[c];
+      if (rec) return { code: code, name: rec[0], kcal: rec[1], p: rec[2], c: rec[3], f: rec[4], stores: rec[5] || "" };
+    }
+    return null;
+  }
+  function pantryRecord(prod) {
+    const r = { code: prod.code, name: prod.name, kcal: prod.kcal, p: prod.p, c: prod.c, f: prod.f };
+    if (prod.stores) r.stores = prod.stores;
+    return r;
+  }
+  function storesLine(prod) {
+    return prod && prod.stores ? `<span class="rb-stores">Sold at ${escHtml(prod.stores)}</span>` : "";
+  }
+  function offAddLink(code) {
+    return /^\d{8,14}$/.test(String(code || "")) ? `<a class="rb-linkbtn rb-off-add" href="https://world.openfoodfacts.org/product/${code}" target="_blank" rel="noopener">Add it to Open Food Facts, so it's found next time — for everyone</a>` : "";
+  }
+
   async function lookupBarcode(code) {
     const mine = getPantry()[code];
     if (mine) return mine;
     if (!state._offCache) state._offCache = {};
     const cache = state._offCache;
     if (cache[code]) return cache[code];
+    const snap = await snapshotLookup(code);
+    if (snap) { cache[code] = snap; saveState(); return snap; }
     let res;
     try {
-      res = await fetch(OFF_URL + encodeURIComponent(code) + ".json?fields=product_name,brands,nutriments",
+      res = await fetch(OFF_URL + encodeURIComponent(code) + ".json?fields=product_name,brands,nutriments,stores",
         { headers: { "Accept": "application/json" } });
     } catch (e) {
       throw new Error("offline");
@@ -1069,6 +1134,7 @@
     if (!macros) throw new Error("nonutrition");
     const name = [prod.brands, prod.product_name].filter(Boolean).join(" — ") || ("Barcode " + code);
     const entry = Object.assign({ name: name, code: code }, macros);
+    if (prod.stores) entry.stores = String(prod.stores).split(",").map(x => x.trim()).filter(Boolean).slice(0, 4).join(", ");
     cache[code] = entry;
     saveState();
     return entry;
@@ -1268,11 +1334,12 @@
             `<option value="g:${k}" ${cur === "g:" + k ? "selected" : ""}>${generalLabel(k)}</option>`).join("")}</optgroup>` : ""}
         </select>`;
     }
-    const msg = pk.msg ? `<p class="rb-scan-result ${pk.ok ? "is-ok" : "is-bad"}">${escHtml(pk.msg)}</p>` : "";
+    const msg = pk.msg ? `<p class="rb-scan-result ${pk.ok ? "is-ok" : "is-bad"}">${escHtml(pk.msg)}</p>${pk.missing ? offAddLink(pk.lastCode) : ""}` : "";
     const card = pk.product && !pk.manual ? `
         <div class="rb-pp-card">
           <b>${escHtml(pk.product.name)}</b>
           <span>${macroLine(pk.product)} &nbsp;<i>per 100g</i></span>
+          ${storesLine(pk.product)}
         </div>` : "";
     const manual = pk.manual ? `
         <div class="rb-pp-manual">
@@ -1303,7 +1370,7 @@
   }
   function pickerHandleCode(ctx, code) {
     const pk = picker(ctx);
-    pk.msg = "Looking up " + code + "\u2026"; pk.ok = true; pk.product = null; pk.manual = false;
+    pk.msg = "Looking up " + code + "\u2026"; pk.ok = true; pk.product = null; pk.manual = false; pk.missing = false;
     render();
     lookupBarcode(code).then(entry => {
       if (pickers[ctx] !== pk) return;
@@ -1315,7 +1382,7 @@
       pk.msg = why === "notfound" ? "Barcode " + code + " isn't in the food database \u2014 type the label values below."
         : why === "nonutrition" ? "That product is listed without nutrition figures \u2014 type them below."
         : "Couldn't reach the food database. Type the values below, or scan again when you have signal.";
-      pk.ok = false; pk.manual = true; pk.lastCode = code;
+      pk.ok = false; pk.manual = true; pk.lastCode = code; pk.missing = why === "notfound" || why === "nonutrition";
       render();
     });
   }
@@ -2032,12 +2099,16 @@
             <div class="rb-pan-main">
               <div class="rb-pan-name">${escHtml(prod.name)}</div>
               <div class="rb-pan-macros">${prod.kcal} kcal &nbsp;\u00B7&nbsp; ${prod.p}g P &nbsp;\u00B7&nbsp; ${prod.c}g C &nbsp;\u00B7&nbsp; ${prod.f}g F &nbsp;<i>per 100g</i></div>
+              ${prod.stores ? `<div class="rb-pan-macros">${storesLine(prod)}</div>` : ""}
               ${used}
               <div class="rb-pan-code">${String(code).indexOf("manual:") === 0 ? "typed by hand" : code}</div>
             </div>
             <button class="rb-custom-remove" data-pantry-del="${code}" type="button" aria-label="Delete product">\u00D7</button>
           </div>`;
       }).join("") + `<p class="rb-log-hint" style="margin-top:16px;">Deleting a product also removes it from the recipes using it, which fall back to the general values.</p>`;
+    listHtml += snapInfo
+      ? `<p class="rb-data-note">Barcodes are checked against a built-in copy of ${snapInfo.count.toLocaleString("en")} European products (${(snapInfo.slovakia || 0).toLocaleString("en")} sold in Slovakia), updated ${escHtml(snapInfo.built)}, then live online. Product data \u00A9 Open Food Facts contributors, ODbL.</p>`
+      : `<p class="rb-data-note">Barcodes are looked up in Open Food Facts. Product data \u00A9 Open Food Facts contributors, ODbL.</p>`;
     }
 
     body.innerHTML = `
@@ -2247,6 +2318,7 @@
               <div class="rb-scope">
                 <p class="rb-scope-name">${escHtml(macroEditing.product.name)}</p>
                 <p class="rb-scope-macros">${macroEditing.product.kcal} kcal &nbsp;\u00B7&nbsp; ${macroEditing.product.p}g P &nbsp;\u00B7&nbsp; ${macroEditing.product.c}g C &nbsp;\u00B7&nbsp; ${macroEditing.product.f}g F &nbsp;<i>per 100g</i></p>
+                ${macroEditing.product.stores ? `<p class="rb-scope-macros" style="margin-top:-8px;">${storesLine(macroEditing.product)}</p>` : ""}
                 <p class="rb-scope-q">Where should this product apply?</p>
                 <button class="rb-scope-btn" data-scope="everywhere" type="button">
                   <b>Everywhere</b><span>Every recipe using ${ingLabelFor(r, row.editIdx)}, from now on</span>
@@ -2528,6 +2600,7 @@
     logPicking = null; weighEditing = null; macroEditing = null; pantryEditing = null;
     history.pushState({ rb: "pantry" }, "", "#pantry");
     render();
+    if (!snapInfo) snapshotIndex().then(j => { if (j && view === "pantry") render(); });
     body.scrollTo(0, 0);
   }
   function openCreate() {
@@ -2628,7 +2701,7 @@
       const grams = gEl ? parseFloat(gEl.value) : NaN;
       if (!prod) { const pk = picker("intake"); pk.msg = "Scan, pick or type a product first."; pk.ok = false; render(); return; }
       if (isNaN(grams) || grams <= 0) { if (gEl) gEl.focus(); return; }
-      if (!prod.nutKey) getPantry()[prod.code] = { code: prod.code, name: prod.name, kcal: prod.kcal, p: prod.p, c: prod.c, f: prod.f };
+      if (!prod.nutKey) getPantry()[prod.code] = pantryRecord(prod);
       logProduct(prod, grams);
       resetPicker("intake");
       logPicking = null;
@@ -2644,7 +2717,7 @@
     if (pAddSave) {
       const prod = pickerResult("pantry");
       if (!prod) { const pk = picker("pantry"); pk.msg = "Scan a barcode or type the product in first."; pk.ok = false; render(); return; }
-      getPantry()[prod.code] = { code: prod.code, name: prod.name, kcal: prod.kcal, p: prod.p, c: prod.c, f: prod.f };
+      getPantry()[prod.code] = pantryRecord(prod);
       resetPicker("pantry"); pantryAdding = false;
       saveState(); render(); return;
     }
@@ -2664,7 +2737,7 @@
       const d = getDraft();
       if (prod.nutKey) d.items.push({ name: prod.name, g: grams, nutKey: prod.nutKey });
       else {
-        getPantry()[prod.code] = { code: prod.code, name: prod.name, kcal: prod.kcal, p: prod.p, c: prod.c, f: prod.f };
+        getPantry()[prod.code] = pantryRecord(prod);
         d.items.push({ name: prod.name, g: grams, code: prod.code, kcal: prod.kcal, p: prod.p, c: prod.c, f: prod.f });
       }
       resetPicker("build"); builderAdding = false;

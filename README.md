@@ -16,6 +16,9 @@ Live at: https://shahulblaze.github.io/Blaze-Cookbook/
 - **Pantry** — every product you've scanned or typed in, plus the list of ingredients the recipes need
 
 Barcodes can be scanned live or read from a gallery photo, and are looked up in Open Food Facts (free, no key).
+Every European product in Open Food Facts that has nutrition figures is also built into the app as an
+offline copy (`scripts/build_off_db.py`, rebuilt weekly by the deploy workflow), so lookups are instant and
+work without signal. Product data © Open Food Facts contributors, ODbL.
 Per-100 g uses raw ingredient weight; logging by portion of the batch avoids weighing altogether.
 
 ## Files
@@ -23,5 +26,7 @@ Per-100 g uses raw ingredient weight; logging by portion of the batch avoids wei
 - `manifest.json` — PWA metadata (name, icons, display mode)
 - `sw.js` — service worker for offline caching
 - `icon-*.png` — app icons
+- `scripts/build_off_db.py` — builds the offline product database from the Open Food Facts export
+- `.github/workflows/deploy.yml` — builds the database weekly and deploys to GitHub Pages
 
 State (ticks, servings, ingredient edits) is saved locally in the browser via `localStorage` and is per-device.

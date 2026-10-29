@@ -1,4 +1,7 @@
-const CACHE_NAME = "blaze-cookbook-v10";
+const CACHE_NAME = "blaze-cookbook-v11";
+// Product database shards live in their own cache, so app updates don't throw
+// away barcodes already looked up, and lookups keep working offline in the shop.
+const DATA_CACHE = "blaze-products-v1";
 const ASSETS = [
   "./",
   "./index.html",
@@ -19,7 +22,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((names) =>
-      Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)))
+      Promise.all(names.filter((n) => n !== CACHE_NAME && n !== DATA_CACHE).map((n) => caches.delete(n)))
     )
   );
   self.clients.claim();
@@ -34,6 +37,23 @@ self.addEventListener("fetch", (event) => {
   // Only ever cache our own files. Food-database lookups must stay live —
   // cached forever, a product's figures could never be corrected.
   if (new URL(req.url).origin !== self.location.origin) return;
+
+  // Product data: answer from cache straight away, refresh in the background so
+  // the weekly rebuild still arrives. Only good responses are kept.
+  if (new URL(req.url).pathname.includes("/data/off/")) {
+    event.respondWith(
+      caches.open(DATA_CACHE).then((cache) =>
+        cache.match(req).then((cached) => {
+          const fresh = fetch(req)
+            .then((res) => { if (res.ok) cache.put(req, res.clone()); return res; })
+            .catch(() => cached || Response.error());
+          if (cached) { event.waitUntil(fresh.catch(() => {})); return cached; }
+          return fresh;
+        })
+      )
+    );
+    return;
+  }
 
   const isHTML = req.mode === "navigate" || (req.headers.get("accept") || "").includes("text/html");
 
