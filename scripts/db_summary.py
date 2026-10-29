@@ -13,3 +13,8 @@ if "lines" in i:
     rej = ", ".join(f"{k} {v:,}" for k, v in i.get("rejected", {}).items())
     seen = ", ".join(f"{k} {v:,}" for k, v in i.get("seen", {}).items())
     print(f"::notice title=Product database detail::{i['lines']:,} lines read. Rejected: {rej}. European products seen before quality filters: {seen}")
+if i.get("probe"):
+    pr = i["probe"]
+    print("::notice title=Product database probe A::types " + json.dumps(pr["nutriments_type"]) + " | nutriment keys " + json.dumps(pr["nutri_keys"]) + " | top-level keys " + json.dumps(pr["top_keys"]))
+    for n, smp in enumerate(pr["samples"]):
+        print(f"::notice title=Product database probe S{n}::" + json.dumps(smp, ensure_ascii=False))

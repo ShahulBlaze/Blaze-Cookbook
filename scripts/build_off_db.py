@@ -145,6 +145,7 @@ def main(src, out_dir):
     recs, by_country, lines, with_stores = {}, Counter(), 0, 0
     why = Counter()          # what every rejected line failed on
     seen_country = Counter()  # European products seen at all, before quality filters
+    probe = {"samples": [], "nutri_keys": Counter(), "top_keys": Counter(), "nutriments_type": Counter()}
     with open_source(src) as fh:
         for line in fh:
             lines += 1
@@ -176,6 +177,18 @@ def main(src, out_dir):
             m = macros(p.get("nutriments"))
             if not m:
                 why["no usable nutrition"] += 1
+                if why["no usable nutrition"] % 997 == 1:   # spread-out sample of what these look like
+                    n = p.get("nutriments")
+                    probe["nutriments_type"][type(n).__name__ + (":empty" if not n else "")] += 1
+                    if isinstance(n, dict):
+                        probe["nutri_keys"].update(k for k in n if "energy" in k or "protein" in k)
+                    probe["top_keys"].update(k for k in p if any(w in k for w in ("nutri", "energy", "nutrition")))
+                    if len(probe["samples"]) < 3 and "en:france" in tags:
+                        probe["samples"].append({
+                            "code": code,
+                            "nutriments": json.dumps(n, ensure_ascii=False)[:220],
+                            "nutrition": json.dumps(p.get("nutrition"), ensure_ascii=False)[:420],
+                        })
                 continue
             name = product_name(p)
             if not name:
@@ -191,6 +204,7 @@ def main(src, out_dir):
                 recs[code] = rec
     with_stores = sum(1 for r in recs.values() if len(r) > 5)
     if len(recs) < 1000:
+        print("Rejected:", dict(why.most_common()), "probe:", json.dumps({k: (v if k == "samples" else dict(v)) for k, v in probe.items()})[:3000])
         sys.exit(f"Only {len(recs)} products kept from {lines:,} lines - refusing to publish a broken database.")
 
     pieces = []
@@ -211,6 +225,8 @@ def main(src, out_dir):
         "lines": lines,
         "rejected": dict(why.most_common()),
         "seen": dict(seen_country.most_common(15)),
+        "probe": {"samples": probe["samples"], "nutri_keys": dict(probe["nutri_keys"].most_common(12)),
+                  "top_keys": dict(probe["top_keys"].most_common(12)), "nutriments_type": dict(probe["nutriments_type"])},
         "source": "Open Food Facts (openfoodfacts.org), ODbL",
         "shards": [p for p, _ in pieces],
     }
