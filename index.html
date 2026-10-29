@@ -122,6 +122,50 @@
     font-family: inherit; cursor: pointer; }
   .rb-scope-btn b { display: block; font-size: 14px; font-weight: 600; color: var(--mustard); margin-bottom: 2px; }
   .rb-scope-btn span { display: block; font-size: 11.5px; color: var(--muted); }
+  .rb-body { padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
+  .rb-tabbar { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); z-index: 50;
+    width: 100%; max-width: 460px; display: flex; background: rgba(33,28,20,.96);
+    border-top: 1px solid var(--line); padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  .rb-tabbar button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 6px 2px; border: none; background: none; color: var(--muted); font-size: 11px; font-weight: 500; }
+  .rb-tabbar svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7;
+    stroke-linecap: round; stroke-linejoin: round; }
+  .rb-tabbar button.is-on { color: var(--mustard); }
+  .rb-seg { display: flex; gap: 4px; background: var(--bg); padding: 3px; border-radius: 9px; margin: 8px 0 10px; }
+  .rb-seg button { flex: 1; padding: 8px 4px; border: none; border-radius: 7px; background: none;
+    color: var(--muted); font-size: 12.5px; font-weight: 500; }
+  .rb-seg button.is-on { background: var(--surface-2); color: var(--mustard); }
+  .rb-portion-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 14px; margin: 4px 0 2px; }
+  .rb-portion-row input { width: 64px; padding: 9px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--text); font-family: inherit; font-size: 15px; text-align: center; }
+  .rb-two-btns { display: flex; gap: 8px; }
+  .rb-two-btns .rb-ate-btn { flex: 1; }
+  .rb-ate-alt { background: var(--surface) !important; color: var(--mustard) !important; border: 1px solid rgba(227,160,8,.45) !important; }
+  .rb-pp-select { margin-top: 8px; }
+  .rb-pp-card { margin: 10px 0 2px; padding: 10px 12px; border-radius: 9px; background: var(--bg);
+    border: 1px solid rgba(227,160,8,.4); }
+  .rb-pp-card b { display: block; font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+  .rb-pp-card span { display: block; font-size: 12px; color: var(--muted); }
+  .rb-pp-manual { margin-top: 10px; }
+  .rb-pp-manual .rb-add-input { width: 100%; }
+  .rb-pp-typelink { display: block; margin: 10px 0 2px; font-size: 12.5px; }
+  .rb-b-field { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .rb-b-field .rb-add-input { width: 100%; font-size: 16px; }
+  .rb-b-row { display: flex; align-items: center; gap: 8px; padding: 9px 2px; border-bottom: 1px solid var(--line); }
+  .rb-b-main { flex: 1; min-width: 0; }
+  .rb-b-name { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rb-b-meta { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .rb-b-g { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }
+  .rb-b-g input { width: 66px; padding: 7px; border-radius: 7px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--text); font-family: inherit; font-size: 14px; text-align: right; }
+  .rb-b-total { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 12px 0 4px; text-align: center; }
+  .rb-b-total div { background: var(--surface); border-radius: 9px; padding: 8px 4px; font-size: 11px; color: var(--muted); }
+  .rb-b-total b { display: block; font-size: 16px; color: var(--text); }
+  .rb-b-save:disabled { opacity: .45; cursor: default; }
+  .rb-b-discard { display: block; margin: 6px auto 0; }
+  .rb-optional { font-style: normal; font-size: 11px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+  .rb-macro-btn.src-fixed { opacity: 1; filter: none; }
   .rb-tabs { display: flex; gap: 6px; margin-bottom: 14px; background: var(--surface); padding: 4px; border-radius: 11px; }
   .rb-tab { flex: 1; padding: 9px 6px; border: none; border-radius: 8px; background: none; color: var(--muted);
     font-family: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer; }
@@ -265,6 +309,9 @@
     padding: 8px 10px; color: var(--text); font-size: 14px; font-family: inherit;
   }
   .rb-side-manual-row span { font-size: 13px; color: var(--muted); }
+  .rb-side-manual-row input[type="number"] { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 9px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--text); font-family: inherit; font-size: 15px; }
+  .rb-side-manual-row input[type="number"]::placeholder { color: var(--muted); }
   .rb-side-cancel { background: none; border: none; color: var(--muted); font-size: 12.5px; text-decoration: underline; padding: 0; align-self: flex-start; }
   .rb-side-added-sub { font-size: 11.5px; color: var(--muted); margin: 4px 0 0; }
 
@@ -290,10 +337,16 @@
     <p class="rb-subtitle" id="rb-header-sub">20 recipes from the batch-cooking system</p>
   </div>
   <div class="rb-body" id="rb-body"></div>
+  <nav class="rb-tabbar" id="rb-tabbar" aria-label="Sections">
+    <button data-nav="home" type="button"><svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/></svg>Recipes</button>
+    <button data-nav="intake" type="button"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Intake</button>
+    <button data-nav="create" type="button"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Create</button>
+    <button data-nav="pantry" type="button"><svg viewBox="0 0 24 24"><path d="M4 7h16l-1 13H5z"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg>Pantry</button>
+  </nav>
 </div>
 <script>
 (function(){
-  const CATS = ["Breakfasts", "Protein Mains", "Protein Boosters", "Veg Mains", "Weekend Feasts"];
+  const CATS = ["My Recipes", "Breakfasts", "Protein Mains", "Protein Boosters", "Veg Mains", "Weekend Feasts"];
 
   const GF = {
     onion: 150, tomato: 120, garlicClove: 3, garlicPowderTsp: 3, gingerPowderTsp: 2, banana: 118,
@@ -340,6 +393,7 @@
   SIDE_TYPES.forEach(s => sideTypeByKey[s.key] = s);
 
   function getNutKey(ing) {
+    if (ing.nutKey) return ing.nutKey;
     if (ing.type === "onion") return "onion";
     if (ing.type === "banana") return "banana";
     if (ing.type === "tomato") return "tomato";
@@ -423,6 +477,11 @@
         if (prod) return { macro: macrosOf(prod), source: "recipe", prod: prod };
       }
       return { macro: { kcal: pinned.kcal, p: pinned.p, c: pinned.c, f: pinned.f }, source: "recipe", prod: pinned };
+    }
+    if (ing.code || ing.fixed) {
+      const own = ing.code ? getPantry()[ing.code] : null;
+      if (own) return { macro: macrosOf(own), source: "fixed", prod: own };
+      if (ing.fixed) return { macro: ing.fixed, source: "fixed", prod: { name: ing.n } };
     }
     const code = getDefaults()[ingredientKey(ing)];
     if (code) {
@@ -892,8 +951,11 @@
   let weighEditing = null; // recipeId whose cooked-weight panel is open
   let macroEditing = null;  // {id, idx, photo} — ingredient whose packet-macros panel is open
   let breakdownOpen = null; // recipeId whose macro breakdown is expanded
+  let logDishSel = null;     // intake: dish chosen in the "add a dish" picker
   let pantryTab = "needed";  // which of the two product lists is showing
   let pantryEditing = null;  // {key, label, product, scanned, scanMsg, scanOk}
+  let builderAdding = false; // recipe builder: add-ingredient panel open
+  let pantryAdding = false;  // pantry: add-product panel open
   const tempMacros = {};    // "recipeId:idx" -> product, for a single cook only (never saved)
   let calcFlash = null;     // recipeId briefly confirming a recalculation
   const sidePicking = {}; // transient UI state: recipeId -> side type key currently being configured
@@ -914,6 +976,7 @@
       state = raw ? JSON.parse(raw) : {};
     } catch (e) { state = {}; }
     getPrefs();
+    syncMyRecipes();
   }
   function saveState() {
     try { localStorage.setItem("blaze-cookbook-state", JSON.stringify(state)); } catch (e) {}
@@ -979,7 +1042,10 @@
   }
 
   async function lookupBarcode(code) {
-    const cache = getPantry();
+    const mine = getPantry()[code];
+    if (mine) return mine;
+    if (!state._offCache) state._offCache = {};
+    const cache = state._offCache;
     if (cache[code]) return cache[code];
     let res;
     try {
@@ -988,6 +1054,7 @@
     } catch (e) {
       throw new Error("offline");
     }
+    if (res.status === 404) throw new Error("notfound");
     if (!res.ok) throw new Error("offline");
     const j = await res.json();
     const prod = j && j.product;
@@ -1089,6 +1156,174 @@
         if (done) return;
         msg.textContent = "No camera access — type the number instead.";
       });
+  }
+
+  // ---- shared helpers ---------------------------------------------------
+  // Product names come from a community database, so never trust them as HTML.
+  function escHtml(v) {
+    return String(v == null ? "" : v).replace(/[&<>"']/g, ch =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
+  }
+  function slug(v) { return String(v || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "item"; }
+  function generalLabel(key) {
+    return key.replace(/_dry$/, " (dry)").replace(/_cooked$/, " (cooked)").replace(/_canned$/, " (canned)")
+      .replace(/_baked$/, " (baked)").replace(/_/g, " ");
+  }
+  // per-100g of a general-table ingredient, honouring an everywhere-default product
+  function generalMacros(key) {
+    const code = getDefaults()[key];
+    const prod = code ? getPantry()[code] : null;
+    if (prod) return macrosOf(prod);
+    const n = NUT[key];
+    return n ? { kcal: n.kcal, p: n.p, c: n.c, f: n.f } : { kcal: 0, p: 0, c: 0, f: 0 };
+  }
+  function macroLine(m) {
+    return `${fmt1(m.kcal)} kcal &nbsp;·&nbsp; ${fmt1(m.p)}g P &nbsp;·&nbsp; ${fmt1(m.c)}g C &nbsp;·&nbsp; ${fmt1(m.f)}g F`;
+  }
+
+  // ---- product picker -----------------------------------------------------
+  // One scan-or-pick-or-type component, reused by the pantry, the intake log
+  // and the recipe builder. Each use gets its own context name.
+  const pickers = {};
+  function picker(ctx) {
+    if (!pickers[ctx]) pickers[ctx] = { product: null, msg: null, ok: true, manual: false, lastCode: null };
+    return pickers[ctx];
+  }
+  function resetPicker(ctx) { delete pickers[ctx]; }
+  function pickerHtml(ctx, opts) {
+    const pk = picker(ctx);
+    const pantry = getPantry();
+    const codes = Object.keys(pantry);
+    let sel = "";
+    if (opts.select && (codes.length || opts.general)) {
+      const cur = pk.product && !pk.manual ? (pk.product.nutKey ? "g:" + pk.product.nutKey : "p:" + pk.product.code) : "";
+      sel = `<select class="rb-log-recipe rb-pp-select" data-pp-select="${ctx}">
+          <option value="">${opts.general ? "…or pick from your pantry or the general list" : "…or pick from your pantry"}</option>
+          ${codes.length ? `<optgroup label="My pantry">${codes.map(c =>
+            `<option value="p:${escHtml(c)}" ${cur === "p:" + c ? "selected" : ""}>${escHtml(pantry[c].name)}</option>`).join("")}</optgroup>` : ""}
+          ${opts.general ? `<optgroup label="General ingredients">${Object.keys(NUT).sort().map(k =>
+            `<option value="g:${k}" ${cur === "g:" + k ? "selected" : ""}>${generalLabel(k)}</option>`).join("")}</optgroup>` : ""}
+        </select>`;
+    }
+    const msg = pk.msg ? `<p class="rb-scan-result ${pk.ok ? "is-ok" : "is-bad"}">${escHtml(pk.msg)}</p>` : "";
+    const card = pk.product && !pk.manual ? `
+        <div class="rb-pp-card">
+          <b>${escHtml(pk.product.name)}</b>
+          <span>${macroLine(pk.product)} &nbsp;<i>per 100g</i></span>
+        </div>` : "";
+    const manual = pk.manual ? `
+        <div class="rb-pp-manual">
+          <input type="text" class="rb-add-input rb-pp-name" placeholder="Product name">
+          <div class="rb-macro-grid">
+            <label><span>kcal</span><input type="number" min="0" step="any" class="rb-pp-kcal"></label>
+            <label><span>protein</span><input type="number" min="0" step="any" class="rb-pp-p"></label>
+            <label><span>carbs</span><input type="number" min="0" step="any" class="rb-pp-c"></label>
+            <label><span>fat</span><input type="number" min="0" step="any" class="rb-pp-f"></label>
+          </div>
+          <p class="rb-log-hint">Per 100 g, as printed on the label.${pk.lastCode ? " Saved under barcode " + escHtml(pk.lastCode) + ", so the next scan finds it." : ""}</p>
+        </div>`
+      : `<button class="rb-linkbtn rb-pp-typelink" data-pp-manual="${ctx}" type="button">Not listed? Type it in yourself</button>`;
+    return `<button class="rb-scan-btn" data-pp-scan="${ctx}" type="button">▥ &nbsp;Scan barcode</button>${msg}${sel}${card}${manual}`;
+  }
+  // The chosen product, or null. Typed entries become pantry-ready products.
+  function pickerResult(ctx) {
+    const pk = picker(ctx);
+    if (!pk.manual) return pk.product;
+    const val = cls => { const el = body.querySelector(cls); const v = el ? parseFloat(el.value) : NaN; return isNaN(v) || v < 0 ? 0 : v; };
+    const nameEl = body.querySelector(".rb-pp-name");
+    const name = nameEl ? nameEl.value.trim() : "";
+    if (!name) return null;
+    return {
+      code: pk.lastCode || ("manual:" + slug(name)), name: name,
+      kcal: val(".rb-pp-kcal"), p: val(".rb-pp-p"), c: val(".rb-pp-c"), f: val(".rb-pp-f")
+    };
+  }
+  function pickerScan(ctx) {
+    const pk = picker(ctx);
+    openScanner(code => {
+      if (pickers[ctx] !== pk) return;
+      pk.msg = "Looking up " + code + "…"; pk.ok = true; pk.product = null; pk.manual = false;
+      render();
+      lookupBarcode(code).then(entry => {
+        if (pickers[ctx] !== pk) return;
+        pk.product = entry; pk.msg = null; pk.lastCode = code;
+        render();
+      }).catch(err => {
+        if (pickers[ctx] !== pk) return;
+        const why = err && err.message;
+        pk.msg = why === "notfound" ? "Barcode " + code + " isn't in the food database — type the label values below."
+          : why === "nonutrition" ? "That product is listed without nutrition figures — type them below."
+          : "Couldn't reach the food database. Type the values below, or scan again when you have signal.";
+        pk.ok = false; pk.manual = true; pk.lastCode = code;
+        render();
+      });
+    });
+  }
+  function pickerSelect(ctx, value) {
+    const pk = picker(ctx);
+    pk.manual = false; pk.msg = null;
+    if (!value) { pk.product = null; return; }
+    if (value.indexOf("p:") === 0) { pk.product = getPantry()[value.slice(2)] || null; return; }
+    if (value.indexOf("g:") === 0) {
+      const key = value.slice(2);
+      pk.product = Object.assign({ code: "general:" + key, name: generalLabel(key), nutKey: key }, generalMacros(key));
+    }
+  }
+
+  // ---- your own recipes -------------------------------------------------
+  // Stored as plain gram lists, then turned into ordinary book recipes so the
+  // servings scaler, checklist, logging and breakdown all work on them too.
+  function myRecipes() {
+    if (!state._myRecipes) state._myRecipes = [];
+    return state._myRecipes;
+  }
+  function toRecipe(m) {
+    return {
+      id: m.id, cat: "My Recipes", title: m.title, price: null, sidesEligible: true, mine: true,
+      ingredients: m.items.map(it => {
+        const ing = { a: it.g, u: "g", n: it.name };
+        if (it.nutKey) ing.nutKey = it.nutKey;
+        else { ing.code = it.code || null; ing.fixed = { kcal: it.kcal, p: it.p, c: it.c, f: it.f }; }
+        return ing;
+      }),
+      steps: (m.steps || []).slice()
+    };
+  }
+  function syncMyRecipes() {
+    for (let i = recipes.length - 1; i >= 0; i--) {
+      if (recipes[i].mine) { delete byId[recipes[i].id]; recipes.splice(i, 1); }
+    }
+    myRecipes().slice().reverse().forEach(m => { const r = toRecipe(m); recipes.unshift(r); byId[r.id] = r; });
+  }
+  function getDraft() {
+    if (!state._draft) state._draft = { editId: null, title: "", items: [], steps: [] };
+    return state._draft;
+  }
+  // live per-100g for a builder line (general items follow the table and defaults)
+  function itemMacros(it) {
+    if (it.nutKey) return generalMacros(it.nutKey);
+    const own = it.code ? getPantry()[it.code] : null;
+    return own ? macrosOf(own) : { kcal: it.kcal, p: it.p, c: it.c, f: it.f };
+  }
+
+  // ---- cooked weight without weighing the pot ---------------------------
+  // Most of the added water in a simmered dish boils off, except what grains
+  // and pulses soak up. This estimate replaces raw weight for per-100g; logging
+  // by portion of the batch avoids weight altogether and is exact.
+  const EVAP_SHARE = 0.5;
+  const ABSORBERS = { rice_dry: 2.0, pasta_dry: 1.5, lentils_dry: 2.2, beans_dry: 2.2, couscous_dry: 1.3, semolina_dry: 2.0 };
+  function batchWeights(r, scale) {
+    let raw = 0, water = 0, absorb = 0;
+    effectiveIngredients(r).forEach(ing => {
+      if (ing.a === null) return;
+      const g = trueGrams(ing, ing.a * scale);
+      raw += g;
+      const k = getNutKey(ing);
+      if (k === "water") water += g;
+      if (ABSORBERS[k]) absorb += g * ABSORBERS[k];
+    });
+    const free = Math.max(0, water - absorb);
+    return { raw: raw, est: raw - free * EVAP_SHARE, evaporated: free * EVAP_SHARE };
   }
 
   // ---- label photos -----------------------------------------------------
@@ -1198,7 +1433,9 @@
   // — if one has been recorded, it wins.
   function effectiveWeight(r, scale, rawTotalG) {
     const st = getRecipeState(r.id);
-    return st.cookedG ? st.cookedG * scale : rawTotalG;
+    if (st.cookedG) return st.cookedG * scale;
+    const w = batchWeights(r, scale).est;
+    return w > 0 ? w : rawTotalG;
   }
   // per-100g profile of a recipe as it is currently configured (edits included)
   function recipePer100(r) {
@@ -1219,6 +1456,30 @@
     getDayLog(viewDate).push({
       id: Date.now(), name: r.title, g: grams,
       kcal: per.kcal * mult, p: per.p * mult, c: per.c * mult, f: per.f * mult
+    });
+    saveState();
+  }
+
+  function logPortion(recipeId, eaten, of) {
+    const r = byId[recipeId];
+    if (!r || !(eaten > 0) || !(of > 0)) return;
+    const st = getRecipeState(recipeId);
+    const main = computeNutrition(r, st.servings, st.overrides);
+    const share = eaten / of;
+    getDayLog(viewDate).push({
+      id: Date.now(), name: r.title + " (" + fmt1(eaten) + "/" + fmt1(of) + " of batch)",
+      g: effectiveWeight(r, st.servings, main.totalG) * share,
+      kcal: main.kcal * share, p: main.p * share, c: main.c * share, f: main.f * share
+    });
+    st.split = of;
+    saveState();
+  }
+  function logProduct(prod, grams) {
+    if (!prod || !(grams > 0)) return;
+    const mult = grams / 100;
+    getDayLog(viewDate).push({
+      id: Date.now(), name: prod.name, g: grams,
+      kcal: prod.kcal * mult, p: prod.p * mult, c: prod.c * mult, f: prod.f * mult
     });
     saveState();
   }
@@ -1428,15 +1689,6 @@
         </span>
         <span class="rb-chevron">›</span>
       </button>`;
-    const pantryCount = Object.keys(getPantry()).length;
-    html += `
-      <button class="rb-intake-card" data-pantry="1" type="button">
-        <span class="rb-intake-main">
-          <span class="rb-intake-title">My products</span>
-          <span class="rb-intake-meta">${pantryCount ? pantryCount + (pantryCount === 1 ? " product" : " products") + " scanned and saved" : "Scan a barcode to start your pantry"}</span>
-        </span>
-        <span class="rb-chevron">\u203A</span>
-      </button>`;
     html += togglePanelHtml(false);
     CATS.forEach(cat => {
       let items = recipes.filter(r => r.cat === cat);
@@ -1480,9 +1732,26 @@
     return todayKey(dt);
   }
 
+  function logModeSeg() {
+    const m = getPrefs().logMode || "g";
+    return `<div class="rb-seg">
+        <button class="${m === "g" ? "is-on" : ""}" data-logmode="g" type="button">By weight</button>
+        <button class="${m === "portion" ? "is-on" : ""}" data-logmode="portion" type="button">By portion of batch</button>
+      </div>`;
+  }
+  function portionInputs(of) {
+    return `<div class="rb-portion-row">I ate
+        <input type="number" min="0" step="any" class="rb-log-eat" value="1"> of
+        <input type="number" min="1" step="1" class="rb-log-of" value="${of}"> equal portions</div>`;
+  }
+  function defaultSplit(rid) {
+    const st = getRecipeState(rid);
+    return st.split || Math.max(1, st.servings || 1);
+  }
+
   function renderIntake() {
     headerTitle.textContent = "Daily intake";
-    headerSub.textContent = "Log what you ate, in grams — the macros follow.";
+    headerSub.textContent = "Scan what you eat, or log a dish by weight or portion.";
 
     const log = getDayLog(viewDate);
     const tot = dayTotals(viewDate);
@@ -1526,7 +1795,7 @@
 
     let listHtml;
     if (!log.length) {
-      listHtml = `<p class="rb-empty">Nothing logged ${isToday ? "yet today" : "for this day"}. Open a recipe and tap “Log what I ate”, or add one below.</p>`;
+      listHtml = `<p class="rb-empty">Nothing logged ${isToday ? "yet today" : "for this day"}. Scan a shop product, or add a dish from the book below.</p>`;
     } else {
       listHtml = log.map(e => `
         <div class="rb-log-row">
@@ -1538,19 +1807,45 @@
         </div>`).join("");
     }
 
-    const pickHtml = logPicking === "__intake__" ? `
+    const logMode = getPrefs().logMode || "g";
+    let pickHtml;
+    if (logPicking === "__intake__") {
+      const sel = logDishSel && byId[logDishSel] ? logDishSel : recipes[0].id;
+      pickHtml = `
       <div class="rb-side-input-panel">
         <p class="rb-side-picker-label" style="margin:0 0 8px;">Which dish, and how much?</p>
-        <select class="rb-log-recipe">
-          ${recipes.map(r => `<option value="${r.id}">${r.title}</option>`).join("")}
+        <select class="rb-log-recipe rb-log-dish">
+          ${recipes.map(r => `<option value="${r.id}" ${r.id === sel ? "selected" : ""}>${escHtml(r.title)}</option>`).join("")}
         </select>
+        ${logModeSeg()}
+        ${logMode === "portion" ? portionInputs(defaultSplit(sel)) + `<p class="rb-log-hint">Exact without weighing anything — your share of the whole batch's macros.</p>` : `
         <div class="rb-side-manual-row" style="margin-top:10px;">
           <input type="number" min="0" step="any" class="rb-log-grams" placeholder="grams">
           <span>g</span>
-        </div>
+        </div>`}
         <button class="rb-side-portion-btn" data-log-save="__intake__" type="button">Add to the day</button>
         <button class="rb-side-cancel" data-log-cancel="1" type="button">Cancel</button>
-      </div>` : `<button class="rb-ate-btn" data-log-open="__intake__" type="button">+ &nbsp;Add something I ate</button>`;
+      </div>`;
+    } else if (logPicking === "__product__") {
+      pickHtml = `
+      <div class="rb-side-input-panel">
+        <p class="rb-side-picker-label" style="margin:0 0 8px;">Something from the shop</p>
+        ${pickerHtml("intake", { select: true, general: true })}
+        <div class="rb-side-manual-row" style="margin-top:10px;">
+          <input type="number" min="0" step="any" class="rb-log-pgrams" placeholder="grams eaten">
+          <span>g</span>
+        </div>
+        <p class="rb-log-hint">Scanned and typed products are kept in your pantry, so next time you can just pick them.</p>
+        <button class="rb-side-portion-btn" data-plog="1" type="button">Add to the day</button>
+        <button class="rb-side-cancel" data-log-cancel="1" type="button">Cancel</button>
+      </div>`;
+    } else {
+      pickHtml = `
+      <div class="rb-two-btns">
+        <button class="rb-ate-btn" data-log-open="__product__" type="button">▥ &nbsp;Scan a product</button>
+        <button class="rb-ate-btn rb-ate-alt" data-log-open="__intake__" type="button">+ &nbsp;Add a dish</button>
+      </div>`;
+    }
 
     body.innerHTML = `
       <button class="rb-back" data-back="1">‹ &nbsp;All recipes</button>
@@ -1603,6 +1898,7 @@
     recipes.forEach(r => {
       r.ingredients.forEach(ing => {
         if (ing.a === null && !getNutKey(ing)) return;
+        if (ing.code || ing.fixed) return;
         const key = ingredientKey(ing);
         if (!map[key]) {
           const label = String(ing.n || "").split(",")[0].trim() || key.replace(/^name:/, "");
@@ -1647,7 +1943,7 @@
               <p class="rb-side-picker-label" style="margin:0 0 8px;">${it.label}</p>
               <button class="rb-scan-btn" data-pscan="1" type="button">\u25A5 &nbsp;Scan barcode</button>
               ${pantryEditing.scanMsg ? `<p class="rb-scan-result ${pantryEditing.scanOk ? "is-ok" : "is-bad"}">${pantryEditing.scanMsg}</p>` : ""}
-              ${pantryEditing.product ? `<p class="rb-scope-name" style="margin:8px 0 2px;">${pantryEditing.product.name}</p>` : ""}
+              ${pantryEditing.product ? `<p class="rb-scope-name" style="margin:8px 0 2px;">${escHtml(pantryEditing.product.name)}</p>` : ""}
               <div class="rb-macro-grid">
                 <label><span>kcal</span><input type="number" min="0" step="any" class="rb-m-kcal" value="${m.kcal !== undefined ? m.kcal : ""}"></label>
                 <label><span>protein</span><input type="number" min="0" step="any" class="rb-m-p" value="${m.p !== undefined ? m.p : ""}"></label>
@@ -1664,14 +1960,14 @@
           <button class="rb-need-row" data-pedit="${it.key}" type="button">
             <span class="rb-need-main">
               <span class="rb-need-name">${it.label}</span>
-              <span class="rb-need-meta">${it.recipes.length} ${it.recipes.length === 1 ? "recipe" : "recipes"}${it.product ? " &nbsp;\u00B7&nbsp; " + it.product.name : ""}</span>
+              <span class="rb-need-meta">${it.recipes.length} ${it.recipes.length === 1 ? "recipe" : "recipes"}${it.product ? " &nbsp;\u00B7&nbsp; " + escHtml(it.product.name) : ""}</span>
             </span>
             <span class="rb-need-state ${it.code ? "is-on" : ""}">${it.code ? "\u2713 yours" : "general"}</span>
           </button>`;
       }).join("");
       listHtml = `<p class="rb-log-hint">${covered} of ${items.length} ingredients are running on your own products. Tap any one to scan it or type its figures — it then applies in every recipe that uses it.</p>` + listHtml;
     } else if (!codes.length) {
-      listHtml = `<p class="rb-empty">Nothing scanned yet. Open the Needed list and scan a barcode \u2014 saved products show up here.</p>`;
+      listHtml = `<p class="rb-empty">Nothing saved yet. Scan anything from the shop above — or use the Needed list to cover your recipe ingredients.</p>`;
     } else {
       listHtml = codes.map(code => {
         const prod = pantry[code];
@@ -1683,7 +1979,7 @@
         return `
           <div class="rb-pan-row">
             <div class="rb-pan-main">
-              <div class="rb-pan-name">${prod.name}</div>
+              <div class="rb-pan-name">${escHtml(prod.name)}</div>
               <div class="rb-pan-macros">${prod.kcal} kcal &nbsp;\u00B7&nbsp; ${prod.p}g P &nbsp;\u00B7&nbsp; ${prod.c}g C &nbsp;\u00B7&nbsp; ${prod.f}g F &nbsp;<i>per 100g</i></div>
               ${used}
               <div class="rb-pan-code">${String(code).indexOf("manual:") === 0 ? "typed by hand" : code}</div>
@@ -1696,7 +1992,93 @@
     body.innerHTML = `
       <button class="rb-back" data-back="1">\u2039 &nbsp;All recipes</button>
       ${tabs}
+      ${pantryTab === "mine" ? (pantryAdding ? `
+        <div class="rb-side-input-panel" style="margin-bottom:12px;">
+          <p class="rb-side-picker-label" style="margin:0 0 8px;">Add a product</p>
+          ${pickerHtml("pantry", { select: false })}
+          <button class="rb-side-portion-btn" data-padd-save="1" type="button">Save to my pantry</button>
+          <button class="rb-side-cancel" data-padd-cancel="1" type="button">Cancel</button>
+        </div>` : `<button class="rb-ate-btn" data-padd-open="1" type="button" style="margin-bottom:12px;">▥ &nbsp;Scan a product to add</button>`) : ""}
       ${listHtml}
+    `;
+  }
+
+  function renderCreate() {
+    const d = getDraft();
+    headerTitle.textContent = d.editId ? "Edit your recipe" : "Create a recipe";
+    headerSub.textContent = "Scan or pick each ingredient, weigh it in — the macros build as you go.";
+
+    let tot = { g: 0, kcal: 0, p: 0, c: 0, f: 0 }, water = 0, absorb = 0;
+    const rows = d.items.map((it, i) => {
+      const m = itemMacros(it);
+      const k = it.g / 100;
+      tot.g += it.g; tot.kcal += m.kcal * k; tot.p += m.p * k; tot.c += m.c * k; tot.f += m.f * k;
+      if (it.nutKey === "water") water += it.g;
+      if (ABSORBERS[it.nutKey]) absorb += it.g * ABSORBERS[it.nutKey];
+      return `
+        <div class="rb-b-row">
+          <div class="rb-b-main">
+            <div class="rb-b-name">${escHtml(it.name)}${it.nutKey ? ' <i class="rb-bd-tag">general</i>' : ""}</div>
+            <div class="rb-b-meta">${Math.round(m.kcal * k)} kcal &nbsp;·&nbsp; ${fmt1(m.p * k)}g protein</div>
+          </div>
+          <label class="rb-b-g"><input type="number" min="0" step="any" class="rb-b-gin" data-bidx="${i}" value="${it.g}"><span>g</span></label>
+          <button class="rb-custom-remove" data-bdel="${i}" type="button" aria-label="Remove">×</button>
+        </div>`;
+    }).join("");
+    const est = tot.g - Math.max(0, water - absorb) * EVAP_SHARE;
+    const per = est > 0 ? { kcal: tot.kcal / est * 100, p: tot.p / est * 100, c: tot.c / est * 100, f: tot.f / est * 100 } : null;
+
+    const addHtml = builderAdding ? `
+      <div class="rb-side-input-panel">
+        <p class="rb-side-picker-label" style="margin:0 0 8px;">Add an ingredient</p>
+        ${pickerHtml("build", { select: true, general: true })}
+        <div class="rb-side-manual-row" style="margin-top:10px;">
+          <input type="number" min="0" step="any" class="rb-b-addg" placeholder="grams you put in">
+          <span>g</span>
+        </div>
+        <button class="rb-side-portion-btn" data-badd="1" type="button">Add to the recipe</button>
+        <button class="rb-side-cancel" data-badd-cancel="1" type="button">Cancel</button>
+      </div>` : `<button class="rb-ate-btn" data-badd-open="1" type="button">+ &nbsp;Add an ingredient</button>`;
+
+    const stepsHtml = d.steps.map((t, i) => `
+        <li class="rb-step"><span class="rb-step-num">${i + 1}</span><span class="rb-step-text">${escHtml(t)}</span>
+          <button class="rb-custom-remove" data-bstep-del="${i}" type="button" aria-label="Remove step">×</button></li>`).join("");
+
+    const canSave = d.title.trim() && d.items.length;
+    body.innerHTML = `
+      <label class="rb-b-field">
+        <span>Recipe name</span>
+        <input type="text" class="rb-add-input rb-b-title" placeholder="e.g. Chicken rice bowl" value="${escHtml(d.title)}">
+      </label>
+
+      <h3 class="rb-section-label" style="margin-top:18px;">Ingredients</h3>
+      ${rows || `<p class="rb-empty">No ingredients yet. Scan a packet's barcode, pick something you've scanned before, or choose from the general list — then enter how many grams went in.</p>`}
+      ${d.items.length ? `
+        <div class="rb-b-total">
+          <div><b>${Math.round(tot.kcal)}</b> kcal</div><div><b>${fmt1(tot.p)}</b>g protein</div>
+          <div><b>${fmt1(tot.c)}</b>g carbs</div><div><b>${fmt1(tot.f)}</b>g fat</div>
+        </div>
+        <p class="rb-weigh-line">Whole batch, ${Math.round(tot.g)}g of ingredients${per ? ` &nbsp;·&nbsp; about ${Math.round(per.kcal)} kcal and ${fmt1(per.p)}g protein per 100g cooked` : ""}</p>` : ""}
+      ${addHtml}
+
+      <h3 class="rb-section-label" style="margin-top:22px;">How to cook it <i class="rb-optional">optional</i></h3>
+      ${d.steps.length ? `<ol class="rb-steps">${stepsHtml}</ol>` : ""}
+      <div class="rb-add-row">
+        <input type="text" class="rb-add-input rb-b-step" placeholder="${d.steps.length ? "Next step…" : "First step, e.g. Fry the onion until golden"}">
+        <button class="rb-add-btn" data-bstep-add="1" type="button">Add</button>
+      </div>
+
+      <button class="rb-calc-btn rb-b-save" data-bsave="1" type="button" ${canSave ? "" : "disabled"}>${d.editId ? "Save changes" : "Save to my recipes"}</button>
+      <p class="rb-weigh-line">${canSave ? "Saved recipes appear at the top of the book and can be logged like any other." : "Give it a name and at least one ingredient to save."}</p>
+      ${(d.items.length || d.title || d.steps.length) ? `<button class="rb-reset rb-b-discard" data-bdiscard="1" type="button">${d.editId ? "Cancel editing" : "Clear and start over"}</button>` : ""}
+      ${myRecipes().length ? `
+        <h3 class="rb-section-label" style="margin-top:26px;">Your saved recipes</h3>
+        ${myRecipes().map(m => `
+          <button class="rb-row" data-open="${m.id}">
+            <span class="rb-row-main"><span class="rb-row-title">${escHtml(m.title)}</span>
+            <span class="rb-row-meta">${m.items.length} ingredients${m.steps && m.steps.length ? " · " + m.steps.length + " steps" : ""}</span></span>
+            <span class="rb-chevron">›</span>
+          </button>`).join("")}` : ""}
     `;
   }
 
@@ -1763,6 +2145,7 @@
       : "\u2014";
 
     const dishG = effectiveWeight(r, scale, main.totalG);
+    const bw = batchWeights(r, scale);
     const per100 = dishG > 0 ? {
       kcal: main.kcal / dishG * 100, p: main.p / dishG * 100,
       c: main.c / dishG * 100, f: main.f / dishG * 100
@@ -1809,13 +2192,13 @@
               const cur = resolveMacro(r.id, r.ingredients[row.editIdx], row.editIdx, st);
               if (cur.source === "general") return `<p class="rb-log-hint" style="margin-top:0;">Scan the barcode to fill these in automatically, or photograph the label and type them yourself.</p>`;
               const where = { everywhere: "in every recipe", recipe: "in this recipe", once: "for this cook only" }[cur.source];
-              return `<p class="rb-scan-result is-ok" style="margin-top:0;">Now using <b>${cur.prod && cur.prod.name ? cur.prod.name : "your own values"}</b> ${where}.</p>`;
+              return `<p class="rb-scan-result is-ok" style="margin-top:0;">Now using <b>${cur.prod && cur.prod.name ? escHtml(cur.prod.name) : "your own values"}</b> ${where}.</p>`;
             })()}
             <button class="rb-scan-btn" data-scan-for="${row.editIdx}" type="button">\u25A5 &nbsp;Scan barcode</button>
             ${macroEditing.scanMsg ? `<p class="rb-scan-result ${macroEditing.scanOk ? "is-ok" : "is-bad"}">${macroEditing.scanMsg}</p>` : ""}
             ${macroEditing.product ? `
               <div class="rb-scope">
-                <p class="rb-scope-name">${macroEditing.product.name}</p>
+                <p class="rb-scope-name">${escHtml(macroEditing.product.name)}</p>
                 <p class="rb-scope-macros">${macroEditing.product.kcal} kcal &nbsp;\u00B7&nbsp; ${macroEditing.product.p}g P &nbsp;\u00B7&nbsp; ${macroEditing.product.c}g C &nbsp;\u00B7&nbsp; ${macroEditing.product.f}g F &nbsp;<i>per 100g</i></p>
                 <p class="rb-scope-q">Where should this product apply?</p>
                 <button class="rb-scope-btn" data-scope="everywhere" type="button">
@@ -1905,7 +2288,10 @@
 
     body.innerHTML = `
       <button class="rb-back" data-back="1">\u2039 &nbsp;All recipes</button>
-      <h1 class="rb-recipe-title">${r.title}</h1>
+      <h1 class="rb-recipe-title">${escHtml(r.title)}</h1>
+      ${r.mine ? `<div class="rb-reset-row" style="margin:-4px 0 14px;">
+        <button class="rb-reset" data-medit="${r.id}" type="button">Edit recipe</button>
+        <button class="rb-reset" data-mdel="${r.id}" type="button">Delete</button></div>` : ""}
 
       <p class="rb-stats-caption">Per 100 g of the finished dish</p>
       <div class="rb-stats-grid rb-stats-grid-4">
@@ -1916,12 +2302,16 @@
       </div>
       ${logPicking === r.id ? `
         <div class="rb-side-input-panel">
-          <p class="rb-side-picker-label" style="margin:0 0 8px;">How many grams did you eat?</p>
-          <div class="rb-side-manual-row">
-            <input type="number" min="0" step="any" class="rb-log-grams" placeholder="grams">
-            <span>g</span>
-          </div>
-          <p class="rb-log-hint">At ${Math.round(per100.kcal)} kcal / 100 g. One whole batch is ${Math.round(dishG)}g.</p>
+          <p class="rb-side-picker-label" style="margin:0 0 8px;">How much did you eat?</p>
+          ${logModeSeg()}
+          ${(getPrefs().logMode || "g") === "portion" ? `
+            ${portionInputs(defaultSplit(r.id))}
+            <p class="rb-log-hint">No weighing: the whole batch (${st.servings} ${st.servings === 1 ? "serving" : "servings"}) is ${Math.round(main.kcal)} kcal and ${Math.round(main.p)}g protein, so one of ${defaultSplit(r.id)} portions is ${Math.round(main.kcal / defaultSplit(r.id))} kcal.</p>` : `
+            <div class="rb-side-manual-row">
+              <input type="number" min="0" step="any" class="rb-log-grams" placeholder="grams on your plate">
+              <span>g</span>
+            </div>
+            <p class="rb-log-hint">At ${Math.round(per100.kcal)} kcal / 100 g. One whole batch is about ${Math.round(dishG)}g.</p>`}
           <button class="rb-side-portion-btn" data-log-save="${r.id}" type="button">Log it</button>
           <button class="rb-side-cancel" data-log-cancel="1" type="button">Cancel</button>
         </div>`
@@ -1934,14 +2324,16 @@
             <input type="number" min="0" step="any" class="rb-cooked-input" value="${st.cookedG ? Math.round(st.cookedG * scale) : ""}" placeholder="grams">
             <span>g</span>
           </div>
-          <p class="rb-log-hint">Weigh the pot contents once after cooking. Raw ingredients come to ${Math.round(main.totalG)}g, but water boils off \u2014 the weighed figure makes every logged portion accurate.</p>
+          <p class="rb-log-hint">No need to lift the pot: put each storage box on the scale, press tare, fill it, and add the readings up. Raw ingredients come to ${Math.round(main.totalG)}g; the current estimate is ${Math.round(bw.est)}g.</p>
           <button class="rb-side-portion-btn" data-cooked-save="${r.id}" type="button">Save</button>
           ${st.cookedG ? `<button class="rb-side-cancel" data-cooked-clear="${r.id}" type="button">Use raw weight instead</button>` : ""}
           <button class="rb-side-cancel" data-cooked-cancel="1" type="button">Cancel</button>
         </div>`
       : `<p class="rb-weigh-line">${st.cookedG
           ? `Using your weighed cooked batch. <button class="rb-linkbtn" data-cooked-edit="${r.id}" type="button">Change</button>`
-          : `Based on raw ingredient weight. <button class="rb-linkbtn" data-cooked-edit="${r.id}" type="button">Weighed it after cooking?</button>`}</p>`}
+          : (bw.evaporated > 1
+            ? `Cooked weight estimated — about ${Math.round(bw.evaporated)}g of the added water simmers off. Logging by portion needs no weight at all. <button class="rb-linkbtn" data-cooked-edit="${r.id}" type="button">Weighed it?</button>`
+            : `Based on ingredient weight. <button class="rb-linkbtn" data-cooked-edit="${r.id}" type="button">Weighed it after cooking?</button>`)}</p>`}
       ${hasSide ? `<p class="rb-combined-line">Meal total incl. side: ${Math.round(combined.totalG)}g &nbsp;\u00B7&nbsp; ${Math.round(combined.kcal)} kcal &nbsp;\u00B7&nbsp; ${Math.round(combined.p)}g protein &nbsp;\u00B7&nbsp; ${Math.round(combined.c)}g carbs &nbsp;\u00B7&nbsp; ${Math.round(combined.f)}g fat</p>` : `<div style="margin-bottom:18px;"></div>`}
 
       <div class="rb-servings-row">
@@ -1996,15 +2388,19 @@
 
       ${renderSideSection(r, st)}
 
-      <h3 class="rb-section-label" style="margin-top:22px;">Method</h3>
-      ${stepsHtml}
+      ${r.steps.length ? `<h3 class="rb-section-label" style="margin-top:22px;">Method</h3>
+      ${stepsHtml}` : ""}
     `;
   }
 
   function r_byId(id) { return byId[id]; }
 
   function render() {
-    if (view === "pantry") renderPantry();
+    const tabFor = view === "recipe" || view === "home" ? "home" : view;
+    document.querySelectorAll("#rb-tabbar [data-nav]").forEach(b =>
+      b.classList.toggle("is-on", b.getAttribute("data-nav") === tabFor));
+    if (view === "create") renderCreate();
+    else if (view === "pantry") renderPantry();
     else if (view === "intake") renderIntake();
     else if (currentId) renderRecipe(currentId);
     else renderHome();
@@ -2042,6 +2438,14 @@
     render();
     body.scrollTo(0, 0);
   }
+  function openCreate() {
+    currentId = null;
+    view = "create";
+    logPicking = null; weighEditing = null; macroEditing = null; builderAdding = false;
+    history.pushState({ rb: "create" }, "", "#create");
+    render();
+    window.scrollTo(0, 0);
+  }
   function goHome(fromPop) {
     currentId = null;
     view = "home";
@@ -2060,6 +2464,7 @@
     if (st && st.rb === "recipe" && byId[st.id]) { currentId = st.id; view = "recipe"; }
     else if (st && st.rb === "intake") { currentId = null; view = "intake"; viewDate = viewDate || todayKey(); }
     else if (st && st.rb === "pantry") { currentId = null; view = "pantry"; }
+    else if (st && st.rb === "create") { currentId = null; view = "create"; }
     else { currentId = null; view = "home"; }
     render();
   });
@@ -2092,6 +2497,138 @@
 
     const backBtn = e.target.closest("[data-back]");
     if (backBtn) { history.back(); return; }
+
+    const navBtn = e.target.closest("[data-nav]");
+    if (navBtn) {
+      const to = navBtn.getAttribute("data-nav");
+      const tabFor = view === "recipe" || view === "home" ? "home" : view;
+      if (to === tabFor && to !== "home") { window.scrollTo(0, 0); return; }
+      if (to === "home") goHome();
+      else if (to === "intake") openIntake();
+      else if (to === "create") openCreate();
+      else if (to === "pantry") openPantry();
+      return;
+    }
+
+    // shared product picker
+    const ppScan = e.target.closest("[data-pp-scan]");
+    if (ppScan) { pickerScan(ppScan.getAttribute("data-pp-scan")); return; }
+    const ppManual = e.target.closest("[data-pp-manual]");
+    if (ppManual) {
+      const pk = picker(ppManual.getAttribute("data-pp-manual"));
+      pk.manual = true; pk.product = null; pk.msg = null;
+      render(); return;
+    }
+
+    // daily intake: log mode, shop products
+    const modeBtn = e.target.closest("[data-logmode]");
+    if (modeBtn) { getPrefs().logMode = modeBtn.getAttribute("data-logmode"); saveState(); render(); return; }
+    const pLogBtn = e.target.closest("[data-plog]");
+    if (pLogBtn) {
+      const prod = pickerResult("intake");
+      const gEl = body.querySelector(".rb-log-pgrams");
+      const grams = gEl ? parseFloat(gEl.value) : NaN;
+      if (!prod) { const pk = picker("intake"); pk.msg = "Scan, pick or type a product first."; pk.ok = false; render(); return; }
+      if (isNaN(grams) || grams <= 0) { if (gEl) gEl.focus(); return; }
+      if (!prod.nutKey) getPantry()[prod.code] = { code: prod.code, name: prod.name, kcal: prod.kcal, p: prod.p, c: prod.c, f: prod.f };
+      logProduct(prod, grams);
+      resetPicker("intake");
+      logPicking = null;
+      render(); return;
+    }
+
+    // pantry: add any product
+    const pAddOpen = e.target.closest("[data-padd-open]");
+    if (pAddOpen) { resetPicker("pantry"); pantryAdding = true; render(); return; }
+    const pAddCancel = e.target.closest("[data-padd-cancel]");
+    if (pAddCancel) { resetPicker("pantry"); pantryAdding = false; render(); return; }
+    const pAddSave = e.target.closest("[data-padd-save]");
+    if (pAddSave) {
+      const prod = pickerResult("pantry");
+      if (!prod) { const pk = picker("pantry"); pk.msg = "Scan a barcode or type the product in first."; pk.ok = false; render(); return; }
+      getPantry()[prod.code] = { code: prod.code, name: prod.name, kcal: prod.kcal, p: prod.p, c: prod.c, f: prod.f };
+      resetPicker("pantry"); pantryAdding = false;
+      saveState(); render(); return;
+    }
+
+    // recipe builder
+    const bAddOpen = e.target.closest("[data-badd-open]");
+    if (bAddOpen) { resetPicker("build"); builderAdding = true; render(); return; }
+    const bAddCancel = e.target.closest("[data-badd-cancel]");
+    if (bAddCancel) { resetPicker("build"); builderAdding = false; render(); return; }
+    const bAdd = e.target.closest("[data-badd]");
+    if (bAdd) {
+      const prod = pickerResult("build");
+      const gEl = body.querySelector(".rb-b-addg");
+      const grams = gEl ? parseFloat(gEl.value) : NaN;
+      if (!prod) { const pk = picker("build"); pk.msg = "Scan, pick or type an ingredient first."; pk.ok = false; render(); return; }
+      if (isNaN(grams) || grams <= 0) { if (gEl) gEl.focus(); return; }
+      const d = getDraft();
+      if (prod.nutKey) d.items.push({ name: prod.name, g: grams, nutKey: prod.nutKey });
+      else {
+        getPantry()[prod.code] = { code: prod.code, name: prod.name, kcal: prod.kcal, p: prod.p, c: prod.c, f: prod.f };
+        d.items.push({ name: prod.name, g: grams, code: prod.code, kcal: prod.kcal, p: prod.p, c: prod.c, f: prod.f });
+      }
+      resetPicker("build"); builderAdding = false;
+      saveState(); render(); return;
+    }
+    const bDel = e.target.closest("[data-bdel]");
+    if (bDel) { getDraft().items.splice(Number(bDel.getAttribute("data-bdel")), 1); saveState(); render(); return; }
+    const bStepAdd = e.target.closest("[data-bstep-add]");
+    if (bStepAdd) {
+      const el = body.querySelector(".rb-b-step");
+      const t = el ? el.value.trim() : "";
+      if (t) { getDraft().steps.push(t); saveState(); render(); const n = body.querySelector(".rb-b-step"); if (n) n.focus(); }
+      return;
+    }
+    const bStepDel = e.target.closest("[data-bstep-del]");
+    if (bStepDel) { getDraft().steps.splice(Number(bStepDel.getAttribute("data-bstep-del")), 1); saveState(); render(); return; }
+    const bDiscard = e.target.closest("[data-bdiscard]");
+    if (bDiscard) {
+      if (!confirm(getDraft().editId ? "Stop editing? Changes are discarded." : "Clear this recipe and start over?")) return;
+      state._draft = null; builderAdding = false; resetPicker("build");
+      saveState(); render(); return;
+    }
+    const bSave = e.target.closest("[data-bsave]");
+    if (bSave && !bSave.disabled) {
+      const d = getDraft();
+      const titleEl = body.querySelector(".rb-b-title");
+      if (titleEl) d.title = titleEl.value;
+      if (!d.title.trim() || !d.items.length) return;
+      const list = myRecipes();
+      let id = d.editId;
+      const entry = { id: id || ("m" + Date.now()), title: d.title.trim(), items: d.items.slice(), steps: d.steps.slice() };
+      if (id) {
+        const k = list.findIndex(m => m.id === id);
+        if (k >= 0) list[k] = entry; else list.unshift(entry);
+        if (state[id]) { state[id].overrides = {}; state[id].macros = {}; state[id].checked = {}; delete state[id].cookedG; }
+      } else {
+        list.unshift(entry);
+      }
+      id = entry.id;
+      state._draft = null;
+      syncMyRecipes();
+      saveState();
+      openRecipe(id);
+      return;
+    }
+    const mEdit = e.target.closest("[data-medit]");
+    if (mEdit) {
+      const m = myRecipes().find(x => x.id === mEdit.getAttribute("data-medit"));
+      if (!m) return;
+      state._draft = { editId: m.id, title: m.title, items: m.items.map(x => Object.assign({}, x)), steps: (m.steps || []).slice() };
+      saveState(); openCreate(); return;
+    }
+    const mDel = e.target.closest("[data-mdel]");
+    if (mDel) {
+      const id = mDel.getAttribute("data-mdel");
+      const m = myRecipes().find(x => x.id === id);
+      if (!m || !confirm("Delete “" + m.title + "”? This can't be undone.")) return;
+      state._myRecipes = myRecipes().filter(x => x.id !== id);
+      delete state[id];
+      syncMyRecipes();
+      saveState(); goHome(); return;
+    }
 
     const intakeBtn = e.target.closest("[data-intake]");
     if (intakeBtn) { openIntake(); return; }
@@ -2194,7 +2731,11 @@
     }
 
     const logOpenBtn = e.target.closest("[data-log-open]");
-    if (logOpenBtn) { logPicking = logOpenBtn.getAttribute("data-log-open"); render(); return; }
+    if (logOpenBtn) {
+      logPicking = logOpenBtn.getAttribute("data-log-open");
+      if (logPicking === "__product__") resetPicker("intake");
+      render(); return;
+    }
 
     const logCancelBtn = e.target.closest("[data-log-cancel]");
     if (logCancelBtn) { logPicking = null; render(); return; }
@@ -2202,18 +2743,28 @@
     const logSaveBtn = e.target.closest("[data-log-save]");
     if (logSaveBtn) {
       const which = logSaveBtn.getAttribute("data-log-save");
-      const gInput = body.querySelector(".rb-log-grams");
-      const grams = gInput ? parseFloat(gInput.value) : NaN;
-      if (isNaN(grams) || grams <= 0) return;
+      const byPortion = (getPrefs().logMode || "g") === "portion";
       let rid = which;
       if (which === "__intake__") {
-        const sel = body.querySelector(".rb-log-recipe");
+        const sel = body.querySelector(".rb-log-dish");
         rid = sel ? sel.value : null;
       } else if (view !== "intake") {
         viewDate = todayKey();
       }
-      if (rid) {
-        logIntake(rid, grams);
+      if (!rid) return;
+      let ok = false;
+      if (byPortion) {
+        const eat = parseFloat((body.querySelector(".rb-log-eat") || {}).value);
+        const of = parseFloat((body.querySelector(".rb-log-of") || {}).value);
+        if (!(eat > 0) || !(of > 0)) return;
+        logPortion(rid, eat, of); ok = true;
+      } else {
+        const gInput = body.querySelector(".rb-log-grams");
+        const grams = gInput ? parseFloat(gInput.value) : NaN;
+        if (isNaN(grams) || grams <= 0) return;
+        logIntake(rid, grams); ok = true;
+      }
+      if (ok) {
         logPicking = null;
         if (view === "intake") render();
         else openIntake();
@@ -2498,8 +3049,24 @@
     }
   });
 
+  root.addEventListener("input", (e) => {
+    if (e.target.classList.contains("rb-b-title")) {
+      getDraft().title = e.target.value;
+      saveState();
+      const btn = body.querySelector("[data-bsave]");
+      if (btn) btn.disabled = !(e.target.value.trim() && getDraft().items.length);
+    }
+  });
+
   root.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && e.target.classList.contains("rb-add-input")) {
+    if (e.key === "Enter" && e.target.classList.contains("rb-b-step")) {
+      e.preventDefault();
+      const btn = body.querySelector("[data-bstep-add]");
+      if (btn) btn.click();
+      return;
+    }
+    if (e.key === "Enter" && e.target.classList.contains("rb-add-input")
+        && !e.target.classList.contains("rb-b-title") && !e.target.classList.contains("rb-pp-name")) {
       e.preventDefault(); tryAddIngredient();
     }
     if (e.key === "Enter" && e.target.classList.contains("rb-side-manual-input")) {
@@ -2520,6 +3087,17 @@
   });
 
   root.addEventListener("change", (e) => {
+    if (e.target.matches("[data-pp-select]")) {
+      pickerSelect(e.target.getAttribute("data-pp-select"), e.target.value);
+      render(); return;
+    }
+    if (e.target.classList.contains("rb-log-dish")) { logDishSel = e.target.value; render(); return; }
+    if (e.target.classList.contains("rb-b-gin")) {
+      const it = getDraft().items[Number(e.target.getAttribute("data-bidx"))];
+      const v = parseFloat(e.target.value);
+      if (it && v > 0) { it.g = v; saveState(); }
+      render(); return;
+    }
     if (e.target.classList.contains("rb-photo-input")) {
       const file = e.target.files && e.target.files[0];
       if (!file || !macroEditing) return;
@@ -2550,6 +3128,10 @@
       view = "recipe";
       history.replaceState({ rb: "home" }, "", location.pathname + location.search);
       history.pushState({ rb: "recipe", id: hash }, "", "#" + hash);
+    } else if (hash === "create") {
+      view = "create";
+      history.replaceState({ rb: "home" }, "", location.pathname + location.search);
+      history.pushState({ rb: "create" }, "", "#create");
     } else if (hash === "pantry") {
       view = "pantry";
       history.replaceState({ rb: "home" }, "", location.pathname + location.search);
