@@ -207,14 +207,19 @@ def main(src, out_dir):
             if not code.isdigit() or not 8 <= len(code) <= 14:
                 why["bad barcode"] += 1
                 continue
+            m = macros(p.get("nutriments")) or macros(flatten_nutrition(p.get("nutrition")))
             name = product_name(p)
             if not name:
-                why["no name"] += 1
-                continue
+                # A barcode with label figures is still worth recognising.
+                brand = clean(str(p.get("brands") or "").split(",")[0], 40)
+                if not m:
+                    why["no name, no figures"] += 1
+                    continue
+                name = (brand + " \u2014 unnamed product") if brand else "Unnamed product"
+                why["kept without a name"] += 1
             tags = set(p.get("countries_tags") or [])
             sk = "en:slovakia" in tags or code.startswith("858")
             cz = "en:czech-republic" in tags or "en:czechia" in tags or code.startswith("859")
-            m = macros(p.get("nutriments")) or macros(flatten_nutrition(p.get("nutrition")))
             st = stores_of(p)
             cats = [c for c in (p.get("categories_tags") or []) if isinstance(c, str)]
             if m:
